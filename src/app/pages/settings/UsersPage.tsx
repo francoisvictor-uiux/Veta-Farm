@@ -35,18 +35,18 @@ interface SystemUser {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const INITIAL_USERS: SystemUser[] = [
-  { id:'u1',  name:'أحمد محمد السيد',       email:'ahmed@negmfarm.com',    role:'manager',      status:'active',   lastLogin:'2026-03-30T09:15:00', createdAt:'2023-01-10', notes:'مدير النظام الرئيسي، صلاحيات كاملة',             avatar:'أ' },
-  { id:'u2',  name:'فاطمة يوسف القحطاني',   email:'fatima@negmfarm.com',   role:'manager',      status:'active',   lastLogin:'2026-03-30T14:40:00', createdAt:'2023-01-15', notes:'مسؤولة عن الإدارة اليومية للمزرعة',              avatar:'ف' },
-  { id:'u3',  name:'خالد عبدالله النجم',    email:'khaled@negmfarm.com',   role:'veterinarian', status:'active',   lastLogin:'2026-03-29T11:22:00', createdAt:'2023-03-05', notes:'دكتور بيطري أول، رقابة كاملة على صحة الرؤوس',   avatar:'خ' },
-  { id:'u4',  name:'سارة أحمد الزهراني',    email:'sara@negmfarm.com',     role:'accountant',   status:'active',   lastLogin:'2026-03-30T08:55:00', createdAt:'2023-04-12', notes:'مسؤولة عن حسابات الموردين والعملاء',              avatar:'س' },
-  { id:'u5',  name:'محمد علي حسن',          email:'mohamed@negmfarm.com',  role:'purchasing',   status:'active',   lastLogin:'2026-03-28T16:30:00', createdAt:'2023-06-01', notes:'',                                                avatar:'م' },
-  { id:'u6',  name:'ليلى محمد الشهري',      email:'layla@negmfarm.com',    role:'warehouse',    status:'active',   lastLogin:'2026-03-27T10:10:00', createdAt:'2023-08-20', notes:'مسؤولة عن مخزن الأعلاف',                         avatar:'ل' },
-  { id:'u7',  name:'عمر صالح الغامدي',      email:'omar@negmfarm.com',     role:'warehouse',    status:'active',   lastLogin:'2026-03-30T07:45:00', createdAt:'2024-01-08', notes:'',                                                avatar:'ع' },
-  { id:'u8',  name:'هيثم جابر الدوسري',     email:'haitham@negmfarm.com',  role:'warehouse',    status:'inactive', lastLogin:'2025-12-15T09:00:00', createdAt:'2024-02-14', notes:'حساب موقوف مؤقتاً',                               avatar:'ه' },
-  { id:'u9',  name:'نورة عبدالعزيز الحربي', email:'noura@negmfarm.com',    role:'purchasing',   status:'active',   lastLogin:'2026-03-29T13:20:00', createdAt:'2024-03-01', notes:'',                                                avatar:'ن' },
-  { id:'u10', name:'ريم فهد البقمي',        email:'reem@negmfarm.com',     role:'accountant',   status:'active',   lastLogin:'2026-03-25T11:00:00', createdAt:'2024-05-10', notes:'',                                                avatar:'ر' },
-  { id:'u11', name:'طارق يحيى الجهني',      email:'tarek@negmfarm.com',    role:'purchasing',   status:'inactive', lastLogin:'2025-11-20T08:30:00', createdAt:'2024-07-22', notes:'موظف سابق، الحساب غير مفعّل',                    avatar:'ط' },
-  { id:'u12', name:'دانا محمد الثقفي',      email:'dana@negmfarm.com',     role:'accountant',   status:'active',   lastLogin:'2026-03-30T10:05:00', createdAt:'2024-09-01', notes:'',                                                avatar:'د' },
+  { id:'u1',  name:'أحمد محمود النجار',      email:'ahmed@negmfarm.com',    role:'manager',      status:'active',   lastLogin:'2026-03-30T09:15:00', createdAt:'2023-01-10', notes:'مدير النظام الرئيسي، صلاحيات كاملة',             avatar:'أ' },
+  { id:'u2',  name:'فاطمة محمد البدوي',      email:'fatima@negmfarm.com',   role:'manager',      status:'active',   lastLogin:'2026-03-30T14:40:00', createdAt:'2023-01-15', notes:'مسؤولة عن الإدارة اليومية للمزرعة',              avatar:'ف' },
+  { id:'u3',  name:'كريم عبدالله الشيخ',     email:'karim@negmfarm.com',    role:'veterinarian', status:'active',   lastLogin:'2026-03-29T11:22:00', createdAt:'2023-03-05', notes:'دكتور بيطري أول، رقابة كاملة على صحة الرؤوس',   avatar:'ك' },
+  { id:'u4',  name:'سارة طارق حجازي',        email:'sara@negmfarm.com',     role:'accountant',   status:'active',   lastLogin:'2026-03-30T08:55:00', createdAt:'2023-04-12', notes:'مسؤولة عن حسابات الموردين والعملاء',              avatar:'س' },
+  { id:'u5',  name:'محمد علي حسن',           email:'mohamed@negmfarm.com',  role:'purchasing',   status:'active',   lastLogin:'2026-03-28T16:30:00', createdAt:'2023-06-01', notes:'',                                                avatar:'م' },
+  { id:'u6',  name:'نور إبراهيم طه',         email:'nour@negmfarm.com',     role:'warehouse',    status:'active',   lastLogin:'2026-03-27T10:10:00', createdAt:'2023-08-20', notes:'مسؤولة عن مخزن الأعلاف',                         avatar:'ن' },
+  { id:'u7',  name:'عمر رمضان درويش',        email:'omar@negmfarm.com',     role:'warehouse',    status:'active',   lastLogin:'2026-03-30T07:45:00', createdAt:'2024-01-08', notes:'',                                                avatar:'ع' },
+  { id:'u8',  name:'هاني فريد عوض',          email:'hany@negmfarm.com',     role:'warehouse',    status:'inactive', lastLogin:'2025-12-15T09:00:00', createdAt:'2024-02-14', notes:'حساب موقوف مؤقتاً',                               avatar:'ه' },
+  { id:'u9',  name:'ياسمين سامي الغزالي',    email:'yasmine@negmfarm.com',  role:'purchasing',   status:'active',   lastLogin:'2026-03-29T13:20:00', createdAt:'2024-03-01', notes:'',                                                avatar:'ي' },
+  { id:'u10', name:'دينا عمر الجندي',        email:'dina@negmfarm.com',     role:'accountant',   status:'active',   lastLogin:'2026-03-25T11:00:00', createdAt:'2024-05-10', notes:'',                                                avatar:'د' },
+  { id:'u11', name:'مصطفى سامي منصور',       email:'mostafa@negmfarm.com',  role:'purchasing',   status:'inactive', lastLogin:'2025-11-20T08:30:00', createdAt:'2024-07-22', notes:'موظف سابق، الحساب غير مفعّل',                    avatar:'م' },
+  { id:'u12', name:'شيرين أحمد سلامة',       email:'shirin@negmfarm.com',   role:'accountant',   status:'active',   lastLogin:'2026-03-30T10:05:00', createdAt:'2024-09-01', notes:'',                                                avatar:'ش' },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -82,12 +82,12 @@ const PAGE_SIZE_OPTIONS = [5, 10, 25, 50]
 
 function fmtDate(d: string) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
+  return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 function fmtDateTime(d: string) {
   if (!d) return '—'
-  return new Date(d).toLocaleString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return new Date(d).toLocaleString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function initials(name: string) {

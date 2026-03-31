@@ -35,18 +35,18 @@ interface Supplier {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const INIT_SUPPLIERS: Supplier[] = [
-  { id:'s1',  name:'أحمد سالم التميمي',     company:'شركة التميمي للأعلاف',          phone:'0501234567', email:'ahmed@tamimi-feed.com',    address:'الرياض، المنطقة الصناعية، شارع الصناعة الثاني',    category:'feed',      balance:14500,  status:'active',   notes:'مورد رئيسي للأعلاف، يوفر خصماً 5% عند الدفع الفوري',  registeredAt:'2021-03-10', lastOrderDate:'2026-03-15' },
-  { id:'s2',  name:'محمد فهد العتيبي',      company:'مؤسسة العتيبي الطبية البيطرية',  phone:'0507654321', email:'mf@etebi-vet.com',          address:'جدة، حي الأمير فيصل، شارع الأمل',                  category:'medicine',  balance:8200,   status:'active',   notes:'متخصص في الأدوية واللقاحات البيطرية',                  registeredAt:'2021-06-20', lastOrderDate:'2026-02-28' },
-  { id:'s3',  name:'خالد ناصر الغامدي',     company:'الغامدي للمعدات الزراعية',      phone:'0509876543', email:'khaled@ghamdi-agri.com',    address:'الدمام، حي الشاطئ، طريق الكورنيش',                 category:'equipment', balance:32000,  status:'active',   notes:'يوفر معدات الحلب والتبريد بضمان سنة',                  registeredAt:'2020-11-05', lastOrderDate:'2026-01-20' },
-  { id:'s4',  name:'سعد عبدالله الحربي',    company:'مزارع الحربي للأعلاف',          phone:'0502468135', email:'saad@harbi-farms.com',      address:'القصيم، بريدة، حي الصفراء',                         category:'feed',      balance:5600,   status:'active',   notes:'',                                                     registeredAt:'2022-01-15', lastOrderDate:'2026-03-10' },
-  { id:'s5',  name:'فيصل راشد الشمري',      company:'الشمري للمستلزمات البيطرية',    phone:'0501357924', email:'faisal@shamri-vet.com',     address:'الرياض، حي العزيزية',                               category:'medicine',  balance:0,      status:'inactive', notes:'توقف التعامل بعد انتهاء العقد',                        registeredAt:'2021-09-01', lastOrderDate:'2025-06-30' },
-  { id:'s6',  name:'عبدالرحمن سليم القحطاني', company:'القحطاني للتجهيزات الزراعية', phone:'0508642097', email:'ar@qahtani-agri.sa',        address:'الطائف، حي الهدا',                                  category:'equipment', balance:18750,  status:'active',   notes:'مورد معدات الري وأنظمة التبريد',                       registeredAt:'2022-04-22', lastOrderDate:'2026-02-05' },
-  { id:'s7',  name:'نورة بنت سعد الزهراني', company:'شركة الزهراني للأدوية البيطرية',phone:'0503216549', email:'noura@zahrani-pharma.com',  address:'جدة، حي الروضة، شارع حراء',                        category:'medicine',  balance:12300,  status:'active',   notes:'وكيل حصري لعدة شركات أدوية أوروبية',                  registeredAt:'2022-07-11', lastOrderDate:'2026-03-01' },
-  { id:'s8',  name:'ماجد يوسف البقمي',      company:'مؤسسة البقمي للأعلاف المركزة', phone:'0506549873', email:'majed@baqami-conc.com',     address:'الرياض، حي الدرعية، طريق الرياض القديم',           category:'feed',      balance:-3200,  status:'active',   notes:'رصيد سالب = المورد يدين لنا بدفعة مرتجعة',            registeredAt:'2022-09-18', lastOrderDate:'2026-03-20' },
-  { id:'s9',  name:'تركي عبدالعزيز المطيري', company:'المطيري للتجارة العامة',       phone:'0504561237', email:'turki@mutairi-trade.com',   address:'المدينة المنورة، حي العوالي',                       category:'other',     balance:6900,   status:'active',   notes:'يوفر مواد التعبئة والتغليف',                           registeredAt:'2023-01-05', lastOrderDate:'2026-01-28' },
-  { id:'s10', name:'هند محمد الرشيدي',      company:'الرشيدي للاستيراد والتصدير',   phone:'0507891234', email:'hind@rashidi-import.com',   address:'الرياض، حي الملز',                                  category:'equipment', balance:25500,  status:'active',   notes:'مستورد معدات ماشية من هولندا وألمانيا',                registeredAt:'2023-03-12', lastOrderDate:'2026-02-14' },
-  { id:'s11', name:'وليد سامر الدوسري',     company:'مؤسسة الدوسري للأعلاف',        phone:'0506667788', email:'walid@dossari-feed.com',    address:'الأحساء، حي المبرز',                                category:'feed',      balance:9100,   status:'inactive', notes:'يوجد نزاع في الفاتورة الأخيرة، تم تجميد التعامل',      registeredAt:'2023-05-20', lastOrderDate:'2025-11-30' },
-  { id:'s12', name:'أسامة جمال العمري',     company:'العمري للتقنيات الزراعية',      phone:'0509990011', email:'osama@omari-agtech.com',    address:'الرياض، حي الإزدهار',                               category:'equipment', balance:41200,  status:'active',   notes:'متخصص في أنظمة الإدارة الذكية للمزارع',               registeredAt:'2023-08-01', lastOrderDate:'2026-03-18' },
+  { id:'s1',  name:'حسام محمود النجار',       company:'شركة النيل للأعلاف',               phone:'01001234567', email:'hossam@nile-feed.com',       address:'القاهرة، مدينة نصر، شارع عباس العقاد',             category:'feed',      balance:72500,  status:'active',   notes:'مورد رئيسي للأعلاف، يوفر خصماً 5% عند الدفع الفوري',  registeredAt:'2021-03-10', lastOrderDate:'2026-03-15' },
+  { id:'s2',  name:'طارق رمضان حسين',         company:'مؤسسة الدلتا الطبية البيطرية',     phone:'01507654321', email:'tarek@delta-vet.com',         address:'الجيزة، المهندسين، شارع جامعة الدول العربية',       category:'medicine',  balance:41000,  status:'active',   notes:'متخصص في الأدوية واللقاحات البيطرية',                  registeredAt:'2021-06-20', lastOrderDate:'2026-02-28' },
+  { id:'s3',  name:'كريم عبدالله الشيخ',      company:'الصعيد للمعدات الزراعية',          phone:'01209876543', email:'karim@saeed-agri.com',        address:'أسيوط، حي الوليدية، شارع النصر',                   category:'equipment', balance:160000, status:'active',   notes:'يوفر معدات الحلب والتبريد بضمان سنة',                  registeredAt:'2020-11-05', lastOrderDate:'2026-01-20' },
+  { id:'s4',  name:'مصطفى حمدي البدوي',       company:'مزارع الشرقية للأعلاف',           phone:'01012468135', email:'mostafa@sharqia-farms.com',   address:'الزقازيق، حي الجامعة، طريق القاهرة',               category:'feed',      balance:28000,  status:'active',   notes:'',                                                     registeredAt:'2022-01-15', lastOrderDate:'2026-03-10' },
+  { id:'s5',  name:'إبراهيم سالم القاضي',     company:'مستلزمات البيطرة الشرقية',         phone:'01551357924', email:'ibrahim@eastern-vet.com',     address:'المنصورة، حي الجمهورية، شارع الجيش',               category:'medicine',  balance:0,      status:'inactive', notes:'توقف التعامل بعد انتهاء العقد',                        registeredAt:'2021-09-01', lastOrderDate:'2025-06-30' },
+  { id:'s6',  name:'وائل سعد منصور',          company:'شركة السادات للتجهيزات الزراعية',  phone:'01008642097', email:'wael@sadat-agri.com',         address:'بني سويف، المنطقة الصناعية، طريق الفيوم',          category:'equipment', balance:93750,  status:'active',   notes:'مورد معدات الري وأنظمة التبريد',                       registeredAt:'2022-04-22', lastOrderDate:'2026-02-05' },
+  { id:'s7',  name:'دينا عمر الجندي',         company:'شركة الجندي للأدوية البيطرية',     phone:'01203216549', email:'dina@gundi-pharma.com',       address:'الإسكندرية، محرم بك، شارع أبو قير',                category:'medicine',  balance:61500,  status:'active',   notes:'وكيل حصري لعدة شركات أدوية أوروبية',                  registeredAt:'2022-07-11', lastOrderDate:'2026-03-01' },
+  { id:'s8',  name:'عادل فريد حافظ',          company:'مؤسسة الفيوم للأعلاف المركزة',    phone:'01006549873', email:'adel@fayoum-conc.com',        address:'الفيوم، حي المحطة، طريق القاهرة',                  category:'feed',      balance:-16000, status:'active',   notes:'رصيد سالب = المورد يدين لنا بدفعة مرتجعة',            registeredAt:'2022-09-18', lastOrderDate:'2026-03-20' },
+  { id:'s9',  name:'هاني نبيل درويش',         company:'الشروق للتجارة العامة',            phone:'01024561237', email:'hany@shorouk-trade.com',      address:'القاهرة، مصر الجديدة، شارع ميرامار',               category:'other',     balance:34500,  status:'active',   notes:'يوفر مواد التعبئة والتغليف',                           registeredAt:'2023-01-05', lastOrderDate:'2026-01-28' },
+  { id:'s10', name:'رانيا خالد شلبي',         company:'شلبي للاستيراد والتصدير',          phone:'01507891234', email:'rania@shalaby-import.com',    address:'القاهرة، المعادي، شارع كورنيش النيل',              category:'equipment', balance:127500, status:'active',   notes:'مستورد معدات ماشية من هولندا وألمانيا',                registeredAt:'2023-03-12', lastOrderDate:'2026-02-14' },
+  { id:'s11', name:'عمر طه زيدان',            company:'مؤسسة المنيا للأعلاف',             phone:'01006667788', email:'omar@minya-feed.com',         address:'المنيا، حي الكورنيش، شارع الجمهورية',              category:'feed',      balance:45500,  status:'inactive', notes:'يوجد نزاع في الفاتورة الأخيرة، تم تجميد التعامل',      registeredAt:'2023-05-20', lastOrderDate:'2025-11-30' },
+  { id:'s12', name:'ياسمين سامي الغزالي',     company:'الغزالي للتقنيات الزراعية',        phone:'01209990011', email:'yasmine@ghazali-agtech.com',  address:'الجيزة، الشيخ زايد، المحور المركزي',               category:'equipment', balance:206000, status:'active',   notes:'متخصص في أنظمة الإدارة الذكية للمزارع',               registeredAt:'2023-08-01', lastOrderDate:'2026-03-18' },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,12 +79,12 @@ const PAGE_SIZE = 8
 // ─────────────────────────────────────────────────────────────────────────────
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n)
+  return n.toLocaleString('ar-EG') + ' ج.م'
 }
 
 function fmtDate(d?: string) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
+  return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 function genId() { return `s${Date.now()}` }
@@ -406,7 +406,7 @@ function SupplierModal({
                 dir="ltr"
                 className="w-full h-9 rounded-lg border border-neutral-200 bg-neutral-50 px-3 pe-12 font-cairo text-[13px] text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 transition text-right"
               />
-              <span className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 font-cairo text-[12px] text-neutral-400 pointer-events-none">ر.س</span>
+              <span className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 font-cairo text-[12px] text-neutral-400 pointer-events-none">ج.م</span>
             </div>
           </div>
 
