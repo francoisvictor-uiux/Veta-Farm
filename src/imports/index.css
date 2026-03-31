@@ -1,0 +1,87 @@
+/* ── Google Font: Cairo ── */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Design Tokens ── */
+:root {
+  /* Primary Green */
+  --color-primary-50:  #eef6ec;
+  --color-primary-100: #dcecd9;
+  --color-primary-200: #b9d9b3;
+  --color-primary-500: #1a4a26;
+  --color-primary-600: #163e08;
+
+  /* Neutral Greys */
+  --color-neutral-50:  #f9f9f9;
+  --color-neutral-100: #f2f2f0;
+  --color-neutral-200: #e6e6e6;
+  --color-neutral-300: #dcddda;
+  --color-neutral-400: #bfbfbf;
+  --color-neutral-600: #757575;
+  --color-neutral-700: #717171;
+  --color-neutral-800: #3a3a3a;
+  --color-neutral-900: #1f1f1f;
+
+  /* Semantic */
+  --color-success: #22c55e;
+  --color-error:   #ef4444;
+  --color-warning: #f59e0b;
+  --color-info:    #3b82f6;
+
+  /* Semantic shades */
+  --color-info-100:    #dbeafe;
+  --color-info-700:    #1d4ed8;
+  --color-success-100: #dcfce7;
+  --color-success-700: #15803d;
+  --color-error-100:   #fee2e2;
+  --color-error-700:   #b91c1c;
+
+  /* Surface */
+  --color-surface:    #fdfdfd;
+  --color-background: #f2f2f0;
+  --color-border:     #dcddda;
+
+  /* Z-index scale */
+  --z-sidebar: 100;
+  --z-header:  200;
+  --z-modal:   300;
+  --z-toast:   400;
+  --z-tooltip: 500;
+}
+
+/* ── Global Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  dir: rtl;
+  font-family: 'Cairo', sans-serif;
+  font-size: 16px;
+  background-color: var(--color-background);
+  color: var(--color-neutral-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body { min-height: 100vh; }
+#root { min-height: 100vh; }
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+/* ── Drawer slide-in animation ── */
+@keyframes slide-in-from-right {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.animate-in.slide-in-from-right {
+  animation: slide-in-from-right 200ms ease-out both;
+}
