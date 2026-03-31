@@ -70,4 +70,6 @@ export const router = createBrowserRouter([
       { path: 'settings/rules',         Component: RulesPage      },
     ],
   },
-])
+], {
+  basename: import.meta.env.BASE_URL
+})
