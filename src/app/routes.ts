@@ -9,6 +9,10 @@ import InventoryPage from './pages/InventoryPage'
 import CattlePage from './pages/CattlePage'
 import SuppliersPage from './pages/SuppliersPage'
 import CustomersPage from './pages/CustomersPage'
+import AttendancePage from './pages/AttendancePage'
+import PayrollPage from './pages/PayrollPage'
+import PurchasingPage from './pages/PurchasingPage'
+import SalesPage from './pages/SalesPage'
 
 // Placeholder component factory for future pages
 import { createElement } from 'react'
@@ -38,14 +42,8 @@ function placeholder(title: string, arabicTitle: string) {
   }
 }
 
-const PurchasingPage  = placeholder('Purchasing',  'المشتريات')
-const SalesPage       = placeholder('Sales',       'المبيعات')
 const AccountsPage    = placeholder('Accounts',    'الحسابات العامة')
 const CashierPage     = placeholder('Cashier',     'الخزينة والبنوك')
-// SuppliersPage is imported above — placeholder removed
-// CustomersPage is imported above — placeholder removed
-const AttendancePage  = placeholder('Attendance',  'الحضور والانصراف')
-const PayrollPage     = placeholder('Payroll',     'الرواتب')
 
 export const router = createBrowserRouter([
   {
@@ -56,20 +54,20 @@ export const router = createBrowserRouter([
     path: '/',
     Component: AppLayout,
     children: [
-      { index: true,                    Component: Dashboard     },
-      { path: 'cattle',                 Component: CattlePage    },
-      { path: 'inventory',              Component: InventoryPage  },
-      { path: 'purchasing',             Component: PurchasingPage },
-      { path: 'sales',                  Component: SalesPage      },
-      { path: 'accounts',               Component: AccountsPage   },
-      { path: 'cashier',                Component: CashierPage    },
-      { path: 'suppliers',              Component: SuppliersPage  },
-      { path: 'customers',              Component: CustomersPage  },
-      { path: 'employees',              Component: EmployeesPage  },
-      { path: 'attendance',             Component: AttendancePage },
-      { path: 'payroll',                Component: PayrollPage    },
-      { path: 'settings/users',         Component: UsersPage      },
-      { path: 'settings/rules',         Component: RulesPage      },
+      { index: true,                    Component: Dashboard        },
+      { path: 'cattle',                 Component: CattlePage       },
+      { path: 'inventory',              Component: InventoryPage    },
+      { path: 'purchasing',             Component: PurchasingPage   },
+      { path: 'sales',                  Component: SalesPage        },
+      { path: 'accounts',               Component: AccountsPage     },
+      { path: 'cashier',                Component: CashierPage      },
+      { path: 'suppliers',              Component: SuppliersPage    },
+      { path: 'customers',              Component: CustomersPage    },
+      { path: 'employees',              Component: EmployeesPage    },
+      { path: 'attendance',             Component: AttendancePage   },
+      { path: 'payroll',                Component: PayrollPage      },
+      { path: 'settings/users',         Component: UsersPage        },
+      { path: 'settings/rules',         Component: RulesPage        },
     ],
   },
 ], {
