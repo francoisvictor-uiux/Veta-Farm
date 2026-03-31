@@ -7,6 +7,7 @@ import UsersPage from './pages/settings/UsersPage'
 import EmployeesPage from './pages/EmployeesPage'
 import InventoryPage from './pages/InventoryPage'
 import CattlePage from './pages/CattlePage'
+import SuppliersPage from './pages/SuppliersPage'
 
 // Placeholder component factory for future pages
 import { createElement } from 'react'
@@ -40,7 +41,7 @@ const PurchasingPage  = placeholder('Purchasing',  'المشتريات')
 const SalesPage       = placeholder('Sales',       'المبيعات')
 const AccountsPage    = placeholder('Accounts',    'الحسابات العامة')
 const CashierPage     = placeholder('Cashier',     'الخزينة والبنوك')
-const SuppliersPage   = placeholder('Suppliers',   'الموردين')
+// SuppliersPage is imported above — placeholder removed
 const CustomersPage   = placeholder('Customers',   'العملاء')
 const AttendancePage  = placeholder('Attendance',  'الحضور والانصراف')
 const PayrollPage     = placeholder('Payroll',     'الرواتب')

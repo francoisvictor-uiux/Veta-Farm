@@ -372,9 +372,10 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
             <h3 className="font-cairo font-bold text-[18px] text-neutral-900 leading-tight mb-1">{isEdit ? 'تعديل رأس' : 'إضافة رأس / عدد'}</h3>
             <p className="font-cairo text-[12px] text-neutral-500">{isEdit ? 'قم بتعديل بيانات الرأس المحددة' : 'سجل بيانات الرؤوس الجديدة (حلاب أو تسمين).'}</p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center">
-            {isEdit ? <Edit2 size={20} className="text-primary-600" /> : <Plus size={20} className="text-primary-600" />}
-          </div>
+          <button onClick={onClose}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-100 transition-colors">
+            <X size={20} />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
@@ -1052,7 +1053,7 @@ export default function CattlePage() {
 
         {/* Tab Content */}
         {activeTab === 'heads' && <HeadsTab cattle={cattle} batches={batches} onAdd={handleAddHeads} />}
-        {activeTab === 'batches' && <BatchesTab batches={batches} onAdd={handleAddBatch} />}
+        {activeTab === 'batches' && <BatchesTab batches={batches} cattle={cattle} onAdd={handleAddBatch} onEdit={handleEditBatch} onDelete={handleDeleteBatch} />}
 
       </div>
     </div>
