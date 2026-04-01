@@ -7,7 +7,6 @@ import SalesPage from './pages/SalesPage'
 import CashierPage from './pages/CashierPage'
 import AccountsPage from './pages/AccountsPage'
 
-// Placeholder page for routes not yet implemented
 function ComingSoon({ title }: { title: string }) {
   return (
     <div className="min-h-full bg-neutral-50 p-6 font-cairo flex items-center justify-center" dir="rtl">
@@ -27,20 +26,20 @@ export const router = createBrowserRouter([
     path: '/',
     Component: AppLayout,
     children: [
-      { index: true,                Component: () => <ComingSoon title="لوحة التحكم" /> },
-      { path: 'cattle',             Component: () => <ComingSoon title="الرؤوس والدورات" /> },
-      { path: 'inventory',          Component: () => <ComingSoon title="المخزون" /> },
-      { path: 'purchasing',         Component: PurchasingPage },
-      { path: 'sales',              Component: SalesPage },
-      { path: 'accounts',           Component: AccountsPage },
-      { path: 'cashier',            Component: CashierPage },
-      { path: 'suppliers',          Component: () => <ComingSoon title="الموردين" /> },
-      { path: 'customers',          Component: () => <ComingSoon title="العملاء" /> },
-      { path: 'employees',          Component: () => <ComingSoon title="الموظفين" /> },
-      { path: 'attendance',         Component: AttendancePage },
-      { path: 'payroll',            Component: PayrollPage },
-      { path: 'settings/users',     Component: () => <ComingSoon title="المستخدمين" /> },
-      { path: 'settings/rules',     Component: () => <ComingSoon title="صلاحيات الوصول" /> },
+      { index: true,            Component: () => <ComingSoon title="لوحة التحكم" /> },
+      { path: 'cattle',         Component: () => <ComingSoon title="الرؤوس والدورات" /> },
+      { path: 'inventory',      Component: () => <ComingSoon title="المخزون" /> },
+      { path: 'purchasing',     Component: PurchasingPage },
+      { path: 'sales',          Component: SalesPage },
+      { path: 'accounts',       Component: AccountsPage },
+      { path: 'cashier',        Component: CashierPage },
+      { path: 'suppliers',      Component: () => <ComingSoon title="الموردين" /> },
+      { path: 'customers',      Component: () => <ComingSoon title="العملاء" /> },
+      { path: 'employees',      Component: () => <ComingSoon title="الموظفين" /> },
+      { path: 'attendance',     Component: AttendancePage },
+      { path: 'payroll',        Component: PayrollPage },
+      { path: 'settings/users', Component: () => <ComingSoon title="المستخدمين" /> },
+      { path: 'settings/rules', Component: () => <ComingSoon title="صلاحيات الوصول" /> },
     ],
   },
 ])

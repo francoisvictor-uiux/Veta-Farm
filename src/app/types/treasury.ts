@@ -1,13 +1,13 @@
 export type AccountType = 'cash' | 'bank'
 export type TxType     = 'deposit' | 'withdrawal' | 'transfer'
 export type TxCategory =
-  | 'sales'        // تحصيل مبيعات
-  | 'purchasing'   // دفع مشتريات
-  | 'payroll'      // رواتب وأجور
-  | 'operating'    // مصروفات تشغيلية
-  | 'maintenance'  // صيانة
-  | 'transfer'     // تحويل داخلي
-  | 'other'        // أخرى
+  | 'sales'
+  | 'purchasing'
+  | 'payroll'
+  | 'operating'
+  | 'maintenance'
+  | 'transfer'
+  | 'other'
 
 export interface TreasuryAccount {
   id: string
@@ -26,10 +26,10 @@ export interface TreasuryTransaction {
   type: TxType
   category: TxCategory
   accountId: string
-  targetAccountId?: string   // for transfers only
+  targetAccountId?: string
   amount: number
   description: string
-  reference?: string         // PO/SO reference
+  reference?: string
   notes?: string
 }
 
