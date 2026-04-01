@@ -52,7 +52,7 @@ export function GlobalSearch({ placeholder = 'بحث سريع...', className = '
       .slice(0, 3).forEach(t => out.push({ id: t.id, category: 'cashier', path: '/cashier', title: t.txNumber, value: fmt(t.amount), sub: t.description }))
     employees
       .filter(e => e.name.includes(q) || e.employeeNumber.toLowerCase().includes(q) || e.department.includes(q) || e.jobTitle.includes(q))
-      .slice(0, 3).forEach(e => out.push({ id: e.id, category: 'hr', path: '/attendance', title: e.name, sub: `${e.employeeNumber} · ${e.jobTitle} · ${e.department}` }))
+      .slice(0, 3).forEach(e => out.push({ id: e.id, category: 'hr', path: '/employees', title: e.name, sub: `${e.employeeNumber} · ${e.jobTitle} · ${e.department}` }))
     return out
   }, [q])
 
