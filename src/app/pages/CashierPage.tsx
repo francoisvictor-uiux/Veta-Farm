@@ -15,6 +15,7 @@ import {
 } from '../types/treasury'
 import { accounts as initAccounts, transactions as initTransactions } from '../data/treasuryData'
 
+// ─── helpers ──────────────────────────────────────────────────────────────────────────────
 const fmtMoney = (n: number) => n.toLocaleString('ar-EG') + ' ج.م'
 const fmtDate  = (d: string) =>
   new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -31,6 +32,7 @@ function usePagination<T>(items: T[], pageSize = PAGE_SIZE) {
   return { page: safePage, setPage, totalPages, slice, total: items.length }
 }
 
+// ─── type/category colours ────────────────────────────────────────────────────────────────────────────
 const TX_TYPE_CFG: Record<TxType, { label: string; color: string; bg: string; dot: string; icon: React.ElementType }> = {
   deposit:    { label: 'إيداع',   color: 'text-green-700',  bg: 'bg-green-50',  dot: 'bg-green-500',  icon: ArrowDownCircle  },
   withdrawal: { label: 'سحب',    color: 'text-red-700',    bg: 'bg-red-50',    dot: 'bg-red-500',    icon: ArrowUpCircle    },
@@ -47,6 +49,7 @@ const CAT_COLOR: Partial<Record<TxCategory, string>> = {
   other:       'bg-neutral-100 text-neutral-500',
 }
 
+// ─── reusable atoms ─────────────────────────────────────────────────────────────────────────────
 const inputCls  = 'w-full h-9 rounded-lg border border-neutral-200 bg-neutral-50 px-3 font-cairo text-[13px] text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/30 focus:border-[#1a6b3c] transition'
 const selectCls = inputCls + ' appearance-none cursor-pointer'
 
@@ -96,18 +99,22 @@ function Pagination({ page, totalPages, setPage, total, pageSize }: {
   )
 }
 
+// ─── Account Card ──────────────────────────────────────────────────────────────────────────────
 function AccountCard({ acc, txList, selected, onClick }: {
   acc: TreasuryAccount; txList: TreasuryTransaction[]
   selected: boolean; onClick: () => void
 }) {
   const lastTx = txList.filter(t => t.accountId === acc.id || t.targetAccountId === acc.id)
     .sort((a, b) => b.date.localeCompare(a.date))[0]
+
   return (
     <button
       onClick={onClick}
       className={[
         'rounded-2xl border p-4 text-right shrink-0 w-[220px] transition-all duration-150 cursor-pointer',
-        selected ? 'bg-[#1a6b3c] border-[#1a6b3c] shadow-md' : 'bg-white border-neutral-100 shadow-sm hover:border-[#1a6b3c]/30 hover:shadow-md',
+        selected
+          ? 'bg-[#1a6b3c] border-[#1a6b3c] shadow-md'
+          : 'bg-white border-neutral-100 shadow-sm hover:border-[#1a6b3c]/30 hover:shadow-md',
       ].join(' ')}
       dir="rtl"
     >
@@ -133,38 +140,62 @@ function AccountCard({ acc, txList, selected, onClick }: {
   )
 }
 
+// ─── Add Deposit/Withdrawal Modal ──────────────────────────────────────────────────────────────────────────
 interface TxForm {
-  type: TxType; accountId: string; category: TxCategory
-  amount: string; date: string; description: string; reference: string; notes: string
+  type: TxType
+  accountId: string
+  category: TxCategory
+  amount: string
+  date: string
+  description: string
+  reference: string
+  notes: string
 }
 
-function AddTransactionModal({ accounts, initType, initAccountId, onSave, onClose }: {
-  accounts: TreasuryAccount[]; initType: 'deposit' | 'withdrawal'
-  initAccountId?: string; onSave: (form: TxForm) => void; onClose: () => void
+function AddTransactionModal({
+  accounts, initType, initAccountId, onSave, onClose,
+}: {
+  accounts: TreasuryAccount[]
+  initType: 'deposit' | 'withdrawal'
+  initAccountId?: string
+  onSave: (form: TxForm) => void
+  onClose: () => void
 }) {
   const [form, setForm] = useState<TxForm>({
-    type: initType, accountId: initAccountId ?? accounts[0]?.id ?? '',
+    type: initType,
+    accountId: initAccountId ?? accounts[0]?.id ?? '',
     category: initType === 'deposit' ? 'sales' : 'purchasing',
-    amount: '', date: todayStr(), description: '', reference: '', notes: '',
+    amount: '',
+    date: todayStr(),
+    description: '',
+    reference: '',
+    notes: '',
   })
   const set = <K extends keyof TxForm>(k: K, v: TxForm[K]) => setForm(f => ({ ...f, [k]: v }))
+
   const cats = form.type === 'deposit' ? DEPOSIT_CATEGORIES : WITHDRAWAL_CATEGORIES
   const valid = !!form.accountId && parseFloat(form.amount) > 0 && form.description.trim() !== ''
+
   const isDeposit = form.type === 'deposit'
   const accent = isDeposit ? '#16a34a' : '#dc2626'
   const accentBg = isDeposit ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
   const iconBg   = isDeposit ? 'bg-green-50' : 'bg-red-50'
   const Icon     = isDeposit ? ArrowDownCircle : ArrowUpCircle
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[460px] overflow-hidden">
-        <div className="h-1 w-full" style={{ background: `linear-gradient(to left, ${accent}, ${accent}aa)` }} />
+        <div className={`h-1 w-full`} style={{ background: `linear-gradient(to left, ${accent}, ${accent}aa)` }} />
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
           <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}><Icon size={15} style={{ color: accent }} /></div>
+            <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
+              <Icon size={15} style={{ color: accent }} />
+            </div>
             <div>
-              <h2 className="font-cairo font-bold text-[15px] text-neutral-800">{isDeposit ? 'إيداع جديد' : 'سحب جديد'}</h2>
+              <h2 className="font-cairo font-bold text-[15px] text-neutral-800">
+                {isDeposit ? 'إيداع جديد' : 'سحب جديد'}
+              </h2>
               <p className="font-cairo text-[11px] text-neutral-400">تسجيل حركة {isDeposit ? 'إيداع' : 'سحب'} في الحساب</p>
             </div>
           </div>
@@ -202,22 +233,29 @@ function AddTransactionModal({ accounts, initType, initAccountId, onSave, onClos
             </Field>
           </div>
           <Field label="المبلغ (ج.م)" required>
-            <input type="number" min="0.01" step="0.01" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0.00" className={inputCls} autoFocus />
+            <input type="number" min="0.01" step="0.01" value={form.amount} onChange={e => set('amount', e.target.value)}
+              placeholder="0.00" className={inputCls} autoFocus />
           </Field>
           <Field label="البيان" required>
-            <input value={form.description} onChange={e => set('description', e.target.value)} placeholder="وصف الحركة..." className={inputCls} />
+            <input value={form.description} onChange={e => set('description', e.target.value)}
+              placeholder="وصف الحركة..." className={inputCls} />
           </Field>
           <Field label="رقم المرجع">
-            <input value={form.reference} onChange={e => set('reference', e.target.value)} placeholder="PO-/SO-/..." className={inputCls} />
+            <input value={form.reference} onChange={e => set('reference', e.target.value)}
+              placeholder="PO-/SO-/..." className={inputCls} />
           </Field>
           <Field label="ملاحظات">
-            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} placeholder="أي ملاحظات إضافية..." className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 font-cairo text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/30 focus:border-[#1a6b3c] transition resize-none" />
+            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2}
+              placeholder="أي ملاحظات إضافية..."
+              className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 font-cairo text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/30 focus:border-[#1a6b3c] transition resize-none" />
           </Field>
         </div>
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-neutral-100">
           <button onClick={onClose} className="px-4 py-2 rounded-lg font-cairo text-[13px] font-semibold text-neutral-600 hover:bg-neutral-100">إلغاء</button>
-          <button onClick={() => valid && onSave(form)} disabled={!valid} className={`flex items-center gap-2 px-5 py-2 text-white rounded-lg font-cairo text-[13px] font-semibold ${accentBg} disabled:opacity-40 disabled:pointer-events-none`}>
-            <Icon size={14} /> تأكيد {isDeposit ? 'الإيداع' : 'السحب'}
+          <button onClick={() => valid && onSave(form)} disabled={!valid}
+            className={`flex items-center gap-2 px-5 py-2 text-white rounded-lg font-cairo text-[13px] font-semibold ${accentBg} disabled:opacity-40 disabled:pointer-events-none`}>
+            <Icon size={14} />
+            تأكيد {isDeposit ? 'الإيداع' : 'السحب'}
           </button>
         </div>
       </div>
@@ -225,7 +263,10 @@ function AddTransactionModal({ accounts, initType, initAccountId, onSave, onClos
   )
 }
 
-function TransferModal({ accounts, onSave, onClose }: {
+// ─── Transfer Modal ──────────────────────────────────────────────────────────────────────────────────
+function TransferModal({
+  accounts, onSave, onClose,
+}: {
   accounts: TreasuryAccount[]
   onSave: (fromId: string, toId: string, amount: number, date: string, notes: string, desc: string) => void
   onClose: () => void
@@ -236,9 +277,11 @@ function TransferModal({ accounts, onSave, onClose }: {
   const [date,   setDate]   = useState(todayStr())
   const [desc,   setDesc]   = useState('')
   const [notes,  setNotes]  = useState('')
+
   const fromAcc = accounts.find(a => a.id === fromId)
   const amt     = parseFloat(amount)
   const valid   = fromId !== toId && amt > 0 && (fromAcc ? amt <= fromAcc.balance : false) && desc.trim() !== ''
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
@@ -246,7 +289,9 @@ function TransferModal({ accounts, onSave, onClose }: {
         <div className="h-1 w-full bg-gradient-to-l from-blue-600 to-blue-400" />
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><ArrowLeftRight size={15} className="text-blue-600" /></div>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <ArrowLeftRight size={15} className="text-blue-600" />
+            </div>
             <div>
               <h2 className="font-cairo font-bold text-[15px] text-neutral-800">تحويل بين الحسابات</h2>
               <p className="font-cairo text-[11px] text-neutral-400">تحويل داخلي بين حسابات المزرعة</p>
@@ -264,7 +309,9 @@ function TransferModal({ accounts, onSave, onClose }: {
             </div>
           </Field>
           <div className="flex items-center justify-center">
-            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center"><ChevronDown size={16} className="text-blue-600" /></div>
+            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+              <ChevronDown size={16} className="text-blue-600" />
+            </div>
           </div>
           <Field label="إلى حساب" required>
             <div className="relative">
@@ -276,7 +323,8 @@ function TransferModal({ accounts, onSave, onClose }: {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="المبلغ (ج.م)" required>
-              <input type="number" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className={inputCls} autoFocus />
+              <input type="number" min="0.01" value={amount} onChange={e => setAmount(e.target.value)}
+                placeholder="0.00" className={inputCls} autoFocus />
             </Field>
             <Field label="التاريخ" required>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputCls} />
@@ -292,12 +340,14 @@ function TransferModal({ accounts, onSave, onClose }: {
             <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="سبب التحويل..." className={inputCls} />
           </Field>
           <Field label="ملاحظات">
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="ملاحظات إضافية..." className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 font-cairo text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-400 transition resize-none" />
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="ملاحظات إضافية..."
+              className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 font-cairo text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-400 transition resize-none" />
           </Field>
         </div>
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-neutral-100">
           <button onClick={onClose} className="px-4 py-2 rounded-lg font-cairo text-[13px] font-semibold text-neutral-600 hover:bg-neutral-100">إلغاء</button>
-          <button onClick={() => valid && onSave(fromId, toId, amt, date, notes, desc)} disabled={!valid} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-cairo text-[13px] font-semibold disabled:opacity-40 disabled:pointer-events-none">
+          <button onClick={() => valid && onSave(fromId, toId, amt, date, notes, desc)} disabled={!valid}
+            className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-cairo text-[13px] font-semibold disabled:opacity-40 disabled:pointer-events-none">
             <ArrowLeftRight size={14} /> تأكيد التحويل
           </button>
         </div>
@@ -306,21 +356,27 @@ function TransferModal({ accounts, onSave, onClose }: {
   )
 }
 
-function ViewTransactionModal({ tx, accounts, onClose }: {
+// ─── View Transaction Modal ────────────────────────────────────────────────────────────────────────────
+function ViewTransactionModal({
+  tx, accounts, onClose,
+}: {
   tx: TreasuryTransaction; accounts: TreasuryAccount[]; onClose: () => void
 }) {
   const acc       = accounts.find(a => a.id === tx.accountId)
   const targetAcc = tx.targetAccountId ? accounts.find(a => a.id === tx.targetAccountId) : null
   const cfg       = TX_TYPE_CFG[tx.type]
   const Icon      = cfg.icon
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[440px] overflow-hidden">
-        <div className="h-1 w-full" style={{ background: tx.type === 'deposit' ? 'linear-gradient(to left,#16a34a,#4ade80)' : tx.type === 'withdrawal' ? 'linear-gradient(to left,#dc2626,#f87171)' : 'linear-gradient(to left,#2563eb,#60a5fa)' }} />
+        <div className={`h-1 w-full ${cfg.bg} opacity-80`} style={{ background: tx.type === 'deposit' ? 'linear-gradient(to left,#16a34a,#4ade80)' : tx.type === 'withdrawal' ? 'linear-gradient(to left,#dc2626,#f87171)' : 'linear-gradient(to left,#2563eb,#60a5fa)' }} />
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
           <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-lg ${cfg.bg} flex items-center justify-center`}><Icon size={15} className={cfg.color} /></div>
+            <div className={`w-8 h-8 rounded-lg ${cfg.bg} flex items-center justify-center`}>
+              <Icon size={15} className={cfg.color} />
+            </div>
             <div>
               <h2 className="font-cairo font-bold text-[15px] text-neutral-800">{tx.txNumber}</h2>
               <p className="font-cairo text-[11px] text-neutral-400">{fmtDate(tx.date)}</p>
@@ -365,6 +421,7 @@ function ViewTransactionModal({ tx, accounts, onClose }: {
   )
 }
 
+// ─── Main Page ────────────────────────────────────────────────────────────────────────────────
 const ALL_TYPES: (TxType | 'all')[] = ['all', 'deposit', 'withdrawal', 'transfer']
 const TYPE_FILTER_LABELS: Record<string, string> = { all: 'الكل', deposit: 'إيداع', withdrawal: 'سحب', transfer: 'تحويل' }
 
@@ -375,6 +432,7 @@ export default function CashierPage() {
   const [filterType, setFilterType] = useState<TxType | 'all'>('all')
   const [filterAcc,  setFilterAcc]  = useState<string>('all')
   const [selectedAccId, setSelectedAccId] = useState<string | null>(null)
+
   const [showDeposit,  setShowDeposit]  = useState(false)
   const [showWithdraw, setShowWithdraw] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
@@ -383,8 +441,10 @@ export default function CashierPage() {
   const stats = useMemo(() => {
     const totalCash  = accs.filter(a => a.type === 'cash').reduce((s, a) => s + a.balance, 0)
     const totalBank  = accs.filter(a => a.type === 'bank').reduce((s, a) => s + a.balance, 0)
-    const todayCount = txs.filter(t => t.date === todayStr()).length
-    return { totalCash, totalBank, totalBal: totalCash + totalBank, todayCount }
+    const totalBal   = totalCash + totalBank
+    const today = todayStr()
+    const todayCount = txs.filter(t => t.date === today).length
+    return { totalCash, totalBank, totalBal, todayCount }
   }, [accs, txs])
 
   const filtered = useMemo(() => {
@@ -405,8 +465,10 @@ export default function CashierPage() {
     const newTx: TreasuryTransaction = {
       id: genId('tx'), txNumber: `TX-2026-${String(txs.length + 1).padStart(3, '0')}`,
       date: form.date, type: form.type, category: form.category,
-      accountId: form.accountId, amount: amt, description: form.description,
-      reference: form.reference || undefined, notes: form.notes || undefined,
+      accountId: form.accountId, amount: amt,
+      description: form.description,
+      reference: form.reference || undefined,
+      notes: form.notes || undefined,
     }
     setTxs(prev => [newTx, ...prev])
     setAccs(prev => prev.map(a => {
@@ -418,10 +480,12 @@ export default function CashierPage() {
   }
 
   function handleTransfer(fromId: string, toId: string, amount: number, date: string, notes: string, desc: string) {
+    const num = String(txs.length + 1).padStart(3, '0')
     const newTx: TreasuryTransaction = {
-      id: genId('tx'), txNumber: `TX-2026-${String(txs.length + 1).padStart(3, '0')}`,
+      id: genId('tx'), txNumber: `TX-2026-${num}`,
       date, type: 'transfer', category: 'transfer',
-      accountId: fromId, targetAccountId: toId, amount, description: desc,
+      accountId: fromId, targetAccountId: toId,
+      amount, description: desc,
       notes: notes || undefined,
     }
     setTxs(prev => [newTx, ...prev])
@@ -431,7 +495,9 @@ export default function CashierPage() {
       return a
     }))
     setShowTransfer(false)
-    toast.success('تم التحويل بنجاح', { description: `${fmtMoney(amount)} من ${accs.find(a => a.id === fromId)?.name} إلى ${accs.find(a => a.id === toId)?.name}` })
+    const fromName = accs.find(a => a.id === fromId)?.name ?? ''
+    const toName   = accs.find(a => a.id === toId)?.name ?? ''
+    toast.success('تم التحويل بنجاح', { description: `${fmtMoney(amount)} من ${fromName} إلى ${toName}` })
   }
 
   const accMap: Record<string, string> = Object.fromEntries(accs.map(a => [a.id, a.name]))
@@ -439,6 +505,7 @@ export default function CashierPage() {
   return (
     <div className="min-h-full bg-neutral-50 p-6 font-cairo" dir="rtl">
       <div className="max-w-[1280px] mx-auto space-y-5">
+
         <div className="flex items-start justify-between">
           <div>
             <h1 className="font-cairo font-bold text-[22px] text-neutral-800">الخزينة والبنوك</h1>
@@ -462,10 +529,10 @@ export default function CashierPage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: Banknote,   label: 'إجمالي النقدية',  value: fmtMoney(stats.totalCash), color: 'bg-amber-50 text-amber-600',    text: 'text-amber-700'  },
-            { icon: Building2,  label: 'إجمالي البنوك',   value: fmtMoney(stats.totalBank), color: 'bg-blue-50 text-blue-600',      text: 'text-blue-700'   },
-            { icon: Wallet2,    label: 'الرصيد الكلي',    value: fmtMoney(stats.totalBal),  color: 'bg-[#e8f5ee] text-[#1a6b3c]',  text: 'text-[#1a6b3c]'  },
-            { icon: CreditCard, label: 'حركات اليوم',     value: String(stats.todayCount),  color: 'bg-violet-50 text-violet-600', text: 'text-violet-700' },
+            { icon: Banknote,     label: 'إجمالي النقدية',  value: fmtMoney(stats.totalCash),  color: 'bg-amber-50 text-amber-600',   text: 'text-amber-700' },
+            { icon: Building2,    label: 'إجمالي البنوك',   value: fmtMoney(stats.totalBank),  color: 'bg-blue-50 text-blue-600',     text: 'text-blue-700'  },
+            { icon: Wallet2,      label: 'الرصيد الكلي',    value: fmtMoney(stats.totalBal),   color: 'bg-[#e8f5ee] text-[#1a6b3c]', text: 'text-[#1a6b3c]' },
+            { icon: CreditCard,   label: 'حركات اليوم',     value: String(stats.todayCount),   color: 'bg-violet-50 text-violet-600', text: 'text-violet-700'},
           ].map(({ icon: Icon, label, value, color, text }) => (
             <div key={label} className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-4 flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color.split(' ')[0]}`}>
@@ -490,7 +557,8 @@ export default function CashierPage() {
           </div>
           <div className="flex gap-3 overflow-x-auto pb-1">
             {accs.map(acc => (
-              <AccountCard key={acc.id} acc={acc} txList={txs}
+              <AccountCard
+                key={acc.id} acc={acc} txList={txs}
                 selected={selectedAccId === acc.id}
                 onClick={() => setSelectedAccId(prev => prev === acc.id ? null : acc.id)}
               />
@@ -528,6 +596,7 @@ export default function CashierPage() {
               ))}
             </div>
           </div>
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -544,15 +613,22 @@ export default function CashierPage() {
                     <p className="font-cairo text-[13px] text-neutral-400">لا توجد حركات مالية مطابقة</p>
                   </td></tr>
                 ) : slice.map((tx, i) => {
-                  const isDeposit = tx.type === 'deposit', isWithdrawal = tx.type === 'withdrawal'
+                  const isDeposit    = tx.type === 'deposit'
+                  const isWithdrawal = tx.type === 'withdrawal'
                   return (
                     <tr key={tx.id} className={`border-b border-neutral-50 hover:bg-neutral-50/70 transition-colors ${i % 2 === 0 ? '' : 'bg-neutral-50/30'}`}>
-                      <td className="px-4 py-3"><span className="font-cairo font-semibold text-[11px] text-[#1a6b3c]">{tx.txNumber}</span></td>
+                      <td className="px-4 py-3">
+                        <span className="font-cairo font-semibold text-[11px] text-[#1a6b3c]">{tx.txNumber}</span>
+                      </td>
                       <td className="px-4 py-3 font-cairo text-[12px] text-neutral-600 whitespace-nowrap">{fmtDate(tx.date)}</td>
                       <td className="px-4 py-3"><TypeBadge type={tx.type} /></td>
                       <td className="px-4 py-3">
                         <p className="font-cairo text-[12px] font-semibold text-neutral-700 whitespace-nowrap">{accMap[tx.accountId] ?? tx.accountId}</p>
-                        {tx.targetAccountId && <p className="font-cairo text-[10px] text-neutral-400 mt-0.5 flex items-center gap-1"><ChevronDown size={9} /> {accMap[tx.targetAccountId]}</p>}
+                        {tx.targetAccountId && (
+                          <p className="font-cairo text-[10px] text-neutral-400 mt-0.5 flex items-center gap-1">
+                            <ChevronDown size={9} /> {accMap[tx.targetAccountId]}
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-3 max-w-[180px]">
                         <p className="font-cairo text-[12px] text-neutral-700 truncate">{tx.description}</p>
@@ -569,10 +645,15 @@ export default function CashierPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        {tx.reference ? <span className="font-cairo text-[11px] text-[#1a6b3c] font-semibold">{tx.reference}</span> : <span className="text-neutral-300">—</span>}
+                        {tx.reference
+                          ? <span className="font-cairo text-[11px] text-[#1a6b3c] font-semibold">{tx.reference}</span>
+                          : <span className="text-neutral-300">—</span>}
                       </td>
                       <td className="px-4 py-3">
-                        <button onClick={() => setViewTx(tx)} title="عرض التفاصيل" className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-[#1a6b3c] hover:bg-[#e8f5ee] transition-colors"><Eye size={14} /></button>
+                        <button onClick={() => setViewTx(tx)} title="عرض التفاصيل"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-[#1a6b3c] hover:bg-[#e8f5ee] transition-colors">
+                          <Eye size={14} />
+                        </button>
                       </td>
                     </tr>
                   )
