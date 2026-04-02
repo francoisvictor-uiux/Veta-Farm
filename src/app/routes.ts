@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router'
+import { createHashRouter } from 'react-router'
 import { AppLayout } from './components/layout/AppLayout'
 import LoginPage from './pages/auth/LoginPage'
 import Dashboard from './pages/Dashboard'
@@ -16,7 +16,7 @@ import SalesPage from './pages/SalesPage'
 import AccountsPage from './pages/AccountsPage'
 import CashierPage from './pages/CashierPage'
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: '/login',
     Component: LoginPage,
@@ -41,6 +41,4 @@ export const router = createBrowserRouter([
       { path: 'settings/rules',         Component: RulesPage        },
     ],
   },
-], {
-  basename: import.meta.env.BASE_URL
-})
+])
