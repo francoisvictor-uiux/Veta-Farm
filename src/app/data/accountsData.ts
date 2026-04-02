@@ -389,7 +389,7 @@ export const JOURNAL_ENTRIES: JournalEntry[] = [
 // ثوابت مفيدة
 // ─────────────────────────────────────────────────────────────────────────────
 export const BASE_CURRENCY = 'EGP'
-export const DEFAULT_INVENTORY_METHOD = 'perpetual' as const
+export const DEFAULT_INVENTORY_METHOD: 'perpetual' | 'periodic' = 'perpetual'
 
 export const MOCK_CUSTOMERS = [
   { id: 'cust1', name: 'مزارع النيل للاستثمار' },
