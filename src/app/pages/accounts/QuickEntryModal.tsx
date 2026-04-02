@@ -38,7 +38,7 @@ export default function QuickEntryModal({ onClose, onSave }: Props) {
   const [costCenterId, setCostCenterId] = useState('')
 
   // General Entry Lines
-  const [lines, setLines] = useState<Partial<JournalLine>[]>([
+  const [lines, setLines] = useState<(Partial<JournalLine> & { id: string })[]>([
     { id: 'l1', debit: 0, credit: 0, currency: BASE_CURRENCY, exchangeRate: 1 },
     { id: 'l2', debit: 0, credit: 0, currency: BASE_CURRENCY, exchangeRate: 1 },
   ])
