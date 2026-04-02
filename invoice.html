@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>فاتورة مبيعات</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold: #c8a951;
+      --gold-light: #f5e9c4;
+      --dark: #1a1a1a;
+      --border: #d4b057;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f0f0f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* ─── CONFIGURATOR ─── */
+    #configurator {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      background: white;
+      border-radius: 16px;
+      padding: 20px 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    #configurator h2 {
+      width: 100%;
+      font-size: 15px;
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #configurator h2 span { font-size:18px; }
+
+    .cfg-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cfg-group label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 600;
+    }
+    .cfg-group select, .cfg-group input[type=text] {
+      height: 36px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1.5px solid #e0e0e0;
+      font-family: 'Cairo', sans-serif;
+      font-size: 13px;
+      color: #333;
+      outline: none;
+      transition: border-color .2s;
+      min-width: 150px;
+    }
+    .cfg-group select:focus, .cfg-group input:focus { border-color: var(--gold); }
+
+    .cfg-checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .cfg-check {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #f7f7f7;
+      border: 1.5px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: #444;
+      transition: all .2s;
+      user-select: none;
+    }
+    .cfg-check:has(input:checked) {
+      background: var(--gold-light);
+      border-color: var(--gold);
+      color: #7a5a10;
+    }
+    .cfg-check input { cursor: pointer; accent-color: var(--gold); }
+
+    .btn-print {
+      margin-right: auto;
+      height: 40px;
+      padding: 0 24px;
+      background: var(--dark);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background .2s;
+    }
+    .btn-print:hover { background: #333; }
+
+    /* ─── INVOICE WRAPPER ─── */
+    #invoice-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* ─── INVOICE CARD ─── */
+    .invoice {
+      background: white;
+      border-radius: 0;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.13);
+      overflow: hidden;
+      position: relative;
+      padding: 0;
+    }
+
+    /* ── TOP GOLD BAR ── */
+    .invoice-topbar {
+      height: 6px;
+      background: linear-gradient(90deg, var(--gold) 0%, #f5d87a 50%, var(--gold) 100%);
+    }
+
+    /* ── HEADER ── */
+    .invoice-header {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 24px 32px 16px;
+      border-bottom: 2px solid var(--gold-light);
+      background: linear-gradient(180deg, #fffdf7 0%, #fff 100%);
+    }
+
+    .store-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .store-name {
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--dark);
+      line-height: 1.1;
+    }
+    .store-sub {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .invoice-logo {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold) 0%, #f5d87a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(200,169,81,0.4);
+    }
+    .invoice-logo svg { width: 36px; height: 36px; fill: white; }
+
+    .invoice-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+    }
+    .invoice-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .invoice-number {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--dark);
+      direction: ltr;
+    }
+
+    /* ── CLIENT BAR ── */
+    .client-bar {
+      display: flex;
+      gap: 24px;
+      padding: 12px 32px;
+      background: #fffdf5;
+      border-bottom: 1px solid var(--gold-light);
+      flex-wrap: wrap;
+    }
+    .client-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .client-field .lbl {
+      font-size: 11px;
+      color: #999;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .client-field .val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--dark);
+    }
+    .client-field .sep {
+      width: 1px;
+      height: 18px;
+      background: var(--gold-light);
+      margin: 0 4px;
+    }
+
+    /* ── TABLE ── */
+    .invoice-table-wrap {
+      padding: 0 0;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead tr {
+      background: var(--dark);
+      color: white;
+    }
+    thead th {
+      padding: 10px 14px;
+      font-size: 11.5px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid #f0e8d0;
+      transition: background .15s;
+    }
+    tbody tr:nth-child(even) { background: #fffdf5; }
+    tbody tr:hover { background: var(--gold-light); }
+    tbody td {
+      padding: 10px 14px;
+      font-size: 13px;
+      text-align: center;
+      color: #333;
+      vertical-align: middle;
+    }
+    .karat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .karat-21 { background: #fff3cd; color: #856404; }
+    .karat-18 { background: #d4edda; color: #155724; }
+    .karat-14 { background: #cce5ff; color: #004085; }
+
+    .category-text {
+      font-size: 12px;
+      color: #555;
+    }
+
+    tfoot tr {
+      background: #f9f6ee;
+    }
+    tfoot td {
+      padding: 9px 14px;
+      font-size: 13px;
+      text-align: center;
+      border-top: 1px solid var(--gold-light);
+    }
+    tfoot tr.total-row td {
+      font-weight: 700;
+      font-size: 13.5px;
+      background: #f0e8d0;
+      color: var(--dark);
+    }
+
+    /* ── SUMMARY ── */
+    .invoice-summary {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      border-top: 2px solid var(--gold-light);
+    }
+    .invoice-notes {
+      padding: 18px 32px;
+      border-left: 1px solid var(--gold-light);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .invoice-notes .notes-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #aaa;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .invoice-notes .note-line {
+      font-size: 13px;
+      color: #555;
+    }
+
+    .invoice-totals {
+      padding: 18px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .total-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .total-line .t-lbl {
+      font-size: 12px;
+      color: #888;
+      font-weight: 600;
+    }
+    .total-line .t-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--dark);
+      direction: ltr;
+    }
+    .total-line.discount .t-val { color: #c0392b; }
+    .total-sep { height: 1px; background: var(--gold-light); margin: 4px 0; }
+    .total-line.grand .t-lbl { font-size: 14px; color: var(--dark); font-weight: 800; }
+    .total-line.grand .t-val {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--gold);
+      background: var(--gold-light);
+      padding: 4px 12px;
+      border-radius: 8px;
+    }
+
+    /* ── FOOTER ── */
+    .invoice-footer {
+      text-align: center;
+      padding: 14px 32px 20px;
+      background: #fffdf5;
+      border-top: 1px solid var(--gold-light);
+      font-size: 11.5px;
+      color: #aaa;
+      display: flex;
+      justify-content: space-between;
+    }
+    .invoice-stamp {
+      font-size: 10px;
+      color: #ccc;
+    }
+
+    /* ── BOTTOM GOLD BAR ── */
+    .invoice-bottombar {
+      height: 4px;
+      background: linear-gradient(90deg, var(--gold) 0%, #f5d87a 50%, var(--gold) 100%);
+    }
+
+    /* ─── PRINT ─── */
+    @media print {
+      body { background: white; padding: 0; }
+      #configurator { display: none !important; }
+      .invoice { box-shadow: none; }
+      #invoice-wrapper { max-width: 100%; }
+    }
+
+    /* ─── HIDDEN COLS LOGIC ─── */
+    .col-workmanship { /* controlled by js */ }
+    .col-scaleweight { }
+    .col-netweight {}
+
+  </style>
+</head>
+<body>
+
+  <!-- ─── CONFIGURATOR ─── -->
+  <div id="configurator">
+    <h2><span>⚙️</span> إعدادات عرض الفاتورة</h2>
+
+    <div class="cfg-group">
+      <label>اسم المحل / الشركة</label>
+      <input type="text" id="cfg-store-name" value="مجوهرات واصف" oninput="renderInvoice()" />
+    </div>
+
+    <div class="cfg-group">
+      <label>تصميم رأس الفاتورة</label>
+      <select id="cfg-header-style" onchange="renderInvoice()">
+        <option value="modern">حديث (شعار دائري)</option>
+        <option value="classic">كلاسيكي (بدون شعار)</option>
+      </select>
+    </div>
+
+    <div class="cfg-group">
+      <label>عملة العرض</label>
+      <select id="cfg-currency" onchange="renderInvoice()">
+        <option value="جـ.م">جنيه مصري (جـ.م)</option>
+        <option value="SAR">ريال سعودي (SAR)</option>
+        <option value="USD">دولار (USD)</option>
+      </select>
+    </div>
+
+    <div class="cfg-group">
+      <label>الأعمدة المعروضة</label>
+      <div class="cfg-checks">
+        <label class="cfg-check"><input type="checkbox" id="col-category" checked onchange="renderInvoice()"/> الفئة</label>
+        <label class="cfg-check"><input type="checkbox" id="col-karat" checked onchange="renderInvoice()"/> العيار</label>
+        <label class="cfg-check"><input type="checkbox" id="col-qty" checked onchange="renderInvoice()"/> العدد</label>
+        <label class="cfg-check"><input type="checkbox" id="col-netweight" checked onchange="renderInvoice()"/> الوزن الصافي</label>
+        <label class="cfg-check"><input type="checkbox" id="col-price" checked onchange="renderInvoice()"/> سعر الجرام</label>
+        <label class="cfg-check"><input type="checkbox" id="col-workmanship" onchange="renderInvoice()"/> أجرة الصنعة</label>
+        <label class="cfg-check"><input type="checkbox" id="col-total" checked onchange="renderInvoice()"/> الإجمالي</label>
+      </div>
+    </div>
+
+    <div class="cfg-group">
+      <label>بيانات إضافية</label>
+      <div class="cfg-checks">
+        <label class="cfg-check"><input type="checkbox" id="show-tax" checked onchange="renderInvoice()"/> الضريبة</label>
+        <label class="cfg-check"><input type="checkbox" id="show-discount" checked onchange="renderInvoice()"/> الخصم</label>
+        <label class="cfg-check"><input type="checkbox" id="show-workmanship-total" checked onchange="renderInvoice()"/> إجمالي الأجرة</label>
+        <label class="cfg-check"><input type="checkbox" id="show-phone" checked onchange="renderInvoice()"/> هاتف العميل</label>
+      </div>
+    </div>
+
+    <button class="btn-print" onclick="window.print()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      طباعة الفاتورة
+    </button>
+  </div>
+
+  <!-- ─── INVOICE OUTPUT ─── -->
+  <div id="invoice-wrapper">
+    <div class="invoice" id="invoice-el"></div>
+  </div>
+
+  <script>
+    // ─── PASTE YOUR RESPONSE DATA HERE ───────────────────────────────
+    const INVOICE_DATA = {"isSuccess":true,"data":{"id":43,"interactorId":10014,"interactorName":"فادى","interactorArName":"فادى","interactorImage":null,"phoneNumber":"+20 ","invoicesSerial":"10","totalGoldGram21":329.43,"totalAmountCash":1614800.00,"totalWorkManShipAmount":28500.00,"totalScaleWeight":0,"totalTax":0.00,"discountPercent":5.00,"discountValue":1500.00,"discountPerGram21":null,"creationDate":"2026-04-02T15:52:40.2416624","totalRemain":null,"releaseOrderImage":null,"finalAmountCash":1645300.00,"releaseOrderItems":[{"itemCategoryParentId":2,"itemCategoryParentName":"Level 1 (2)","itemCategoryParentArName":"المستوى الاول 2","itemCategoryChildId":1,"itemCategoryChildName":"Level 1","itemCategoryChildArName":"المستوى الاول","quantity":12,"numberOfTicket":null,"ticketWeight":null,"scaleWeight":null,"netWeight":150.00,"classNamePrint":null,"sellPricePerGram":5000.00,"workManShipValue":null,"mineKaratId":3,"mineKaratName":"21K","mineKaratArName":"عيار 21"},{"itemCategoryParentId":2,"itemCategoryParentName":"Level 1 (2)","itemCategoryParentArName":"المستوى الاول 2","itemCategoryChildId":1,"itemCategoryChildName":"Level 1","itemCategoryChildArName":"المستوى الاول","quantity":12,"numberOfTicket":null,"ticketWeight":null,"scaleWeight":null,"netWeight":12.00,"classNamePrint":null,"sellPricePerGram":5400.00,"workManShipValue":null,"mineKaratId":1,"mineKaratName":"14K","mineKaratArName":"عيار 14"},{"itemCategoryParentId":2,"itemCategoryParentName":"Level 1 (2)","itemCategoryParentArName":"المستوى الاول 2","itemCategoryChildId":1,"itemCategoryChildName":"Level 1","itemCategoryChildArName":"المستوى الاول","quantity":5,"numberOfTicket":null,"ticketWeight":null,"scaleWeight":null,"netWeight":200.00,"classNamePrint":null,"sellPricePerGram":4000.00,"workManShipValue":150.00,"mineKaratId":2,"mineKaratName":"18K","mineKaratArName":"عيار 18"}]}}
+    // ─────────────────────────────────────────────────────────────────
+
+    const d = INVOICE_DATA.data
+
+    function fmt(n) {
+      if (n === null || n === undefined) return '—'
+      return Number(n).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    }
+
+    function fmtDate(iso) {
+      const dt = new Date(iso)
+      return dt.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' })
+    }
+
+    function karatClass(name) {
+      if (name.includes('21')) return 'karat-21'
+      if (name.includes('18')) return 'karat-18'
+      return 'karat-14'
+    }
+
+    function getCol(id) { return document.getElementById(id)?.checked }
+
+    function renderInvoice() {
+      const storeName = document.getElementById('cfg-store-name')?.value || 'مجوهرات'
+      const headerStyle = document.getElementById('cfg-header-style')?.value || 'modern'
+      const currency = document.getElementById('cfg-currency')?.value || 'جـ.م'
+
+      const showCategory = getCol('col-category')
+      const showKarat = getCol('col-karat')
+      const showQty = getCol('col-qty')
+      const showNetWeight = getCol('col-netweight')
+      const showPrice = getCol('col-price')
+      const showWorkmanship = getCol('col-workmanship')
+      const showTotal = getCol('col-total')
+      const showTax = getCol('show-tax')
+      const showDiscount = getCol('show-discount')
+      const showWMTotal = getCol('show-workmanship-total')
+      const showPhone = getCol('show-phone')
+
+      // Build headers
+      const headers = []
+      if (showCategory) headers.push('<th>الفئة / الصنف</th>')
+      if (showKarat) headers.push('<th>العيار</th>')
+      if (showQty) headers.push('<th>العدد</th>')
+      if (showNetWeight) headers.push('<th>الوزن الصافي (جم)</th>')
+      if (showPrice) headers.push('<th>سعر الجرام</th>')
+      if (showWorkmanship) headers.push('<th>أجرة الصنعة</th>')
+      if (showTotal) headers.push('<th>الإجمالي</th>')
+
+      // Build rows
+      const rows = d.releaseOrderItems.map((item, idx) => {
+        const lineTotal = item.netWeight * item.sellPricePerGram + (item.workManShipValue || 0)
+        let cells = ''
+        if (showCategory) cells += `<td class="category-text">${item.itemCategoryChildArName}</td>`
+        if (showKarat) cells += `<td><span class="karat-badge ${karatClass(item.mineKaratName)}">${item.mineKaratArName}</span></td>`
+        if (showQty) cells += `<td>${item.quantity}</td>`
+        if (showNetWeight) cells += `<td>${fmt(item.netWeight)}</td>`
+        if (showPrice) cells += `<td>${fmt(item.sellPricePerGram)} ${currency}</td>`
+        if (showWorkmanship) cells += `<td>${item.workManShipValue ? fmt(item.workManShipValue) + ' ' + currency : '—'}</td>`
+        if (showTotal) cells += `<td><strong>${fmt(lineTotal)} ${currency}</strong></td>`
+        return `<tr>${cells}</tr>`
+      }).join('')
+
+      // Totals footer row
+      const totalCols = headers.length
+      const totNetWeight = d.releaseOrderItems.reduce((s, i) => s + (i.netWeight || 0), 0)
+      const totQty = d.releaseOrderItems.reduce((s, i) => s + (i.quantity || 0), 0)
+      let footerCols = ''
+      if (showCategory) footerCols += `<td style="font-weight:700;text-align:right;padding-right:10px;">الإجمالي</td>`
+      let colIdx = showCategory ? 1 : 0
+      if (showKarat) { footerCols += `<td>—</td>`; colIdx++ }
+      if (showQty) { footerCols += `<td><strong>${totQty}</strong></td>`; colIdx++ }
+      if (showNetWeight) { footerCols += `<td><strong>${fmt(totNetWeight)}</strong></td>`; colIdx++ }
+      if (showPrice) { footerCols += `<td>—</td>`; colIdx++ }
+      if (showWorkmanship) { footerCols += `<td><strong>${fmt(d.totalWorkManShipAmount)} ${currency}</strong></td>`; colIdx++ }
+      if (showTotal) { footerCols += `<td><strong>${fmt(d.totalAmountCash)} ${currency}</strong></td>`; colIdx++ }
+
+      const logoHtml = headerStyle === 'modern' ? `
+        <div class="invoice-logo">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="50,10 90,35 90,65 50,90 10,65 10,35" fill="rgba(255,255,255,0.9)" />
+            <text x="50" y="58" text-anchor="middle" font-family="Cairo" font-weight="900" font-size="22" fill="#c8a951">Au</text>
+          </svg>
+        </div>` : ''
+
+      const summaryLines = []
+      summaryLines.push(`<div class="total-line"><span class="t-lbl">المبلغ قبل الخصم</span><span class="t-val">${fmt(d.totalAmountCash)} ${currency}</span></div>`)
+      if (showWMTotal) summaryLines.push(`<div class="total-line"><span class="t-lbl">إجمالي أجرة الصنعة</span><span class="t-val">${fmt(d.totalWorkManShipAmount)} ${currency}</span></div>`)
+      if (showTax && d.totalTax > 0) summaryLines.push(`<div class="total-line"><span class="t-lbl">ضريبة</span><span class="t-val">${fmt(d.totalTax)} ${currency}</span></div>`)
+      if (showDiscount && d.discountValue > 0) summaryLines.push(`<div class="total-line discount"><span class="t-lbl">خصم ${d.discountPercent}%</span><span class="t-val">- ${fmt(d.discountValue)} ${currency}</span></div>`)
+      summaryLines.push(`<div class="total-sep"></div>`)
+      summaryLines.push(`<div class="total-line grand"><span class="t-lbl">الإجمالي النهائي</span><span class="t-val">${fmt(d.finalAmountCash)} ${currency}</span></div>`)
+
+      const phoneHtml = showPhone && d.phoneNumber ? `
+        <div class="client-field">
+          <div class="sep"></div>
+          <span class="lbl">📞 هاتف</span>
+          <span class="val" dir="ltr">${d.phoneNumber}</span>
+        </div>` : ''
+
+      const html = `
+        <div class="invoice-topbar"></div>
+
+        <div class="invoice-header">
+          <div class="store-info">
+            <div class="store-name">${storeName}</div>
+            <div class="store-sub">فاتورة مبيعات رسمية</div>
+          </div>
+          ${logoHtml}
+          <div class="invoice-meta">
+            <div class="invoice-title">Invoice</div>
+            <div class="invoice-number"># ${d.invoicesSerial}</div>
+          </div>
+        </div>
+
+        <div class="client-bar">
+          <div class="client-field">
+            <span class="lbl">👤 اسم العميل</span>
+            <span class="val">${d.interactorArName || d.interactorName}</span>
+          </div>
+          ${phoneHtml}
+          <div class="client-field">
+            <div class="sep"></div>
+            <span class="lbl">📅 التاريخ</span>
+            <span class="val">${fmtDate(d.creationDate)}</span>
+          </div>
+          <div class="client-field">
+            <div class="sep"></div>
+            <span class="lbl">⚖️ إجمالي الذهب عيار 21</span>
+            <span class="val">${fmt(d.totalGoldGram21)} جم</span>
+          </div>
+        </div>
+
+        <div class="invoice-table-wrap">
+          <table>
+            <thead>
+              <tr>${headers.join('')}</tr>
+            </thead>
+            <tbody>${rows}</tbody>
+            <tfoot>
+              <tr class="total-row">${footerCols}</tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="invoice-summary">
+          <div class="invoice-notes">
+            <div class="notes-title">ملاحظات</div>
+            <div class="note-line">• البضاعة المباعة لا ترد ولا تستبدل إلا بموافقة الإدارة</div>
+            <div class="note-line">• يُرجى الاحتفاظ بهذه الفاتورة</div>
+          </div>
+          <div class="invoice-totals">
+            ${summaryLines.join('')}
+          </div>
+        </div>
+
+        <div class="invoice-footer">
+          <span>شكراً لتعاملكم معنا 🙏</span>
+          <span class="invoice-stamp">تم الإصدار بواسطة النظام — ${fmtDate(d.creationDate)}</span>
+        </div>
+
+        <div class="invoice-bottombar"></div>
+      `
+
+      document.getElementById('invoice-el').innerHTML = html
+    }
+
+    // Initial render
+    renderInvoice()
+  </script>
+</body>
+</html>
