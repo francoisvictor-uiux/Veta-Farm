@@ -1,4 +1,14 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
+import {
+  inventoryTransactionsApi,
+  warehousesApi,
+  itemsApi,
+  itemCategoriesApi,
+  type CreateInventoryTransactionRequest,
+  type ItemListItem,
+  type WarehouseItem as ApiWarehouseItem,
+} from '../services/api'
+import { toast } from 'sonner'
 import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 import {
   Package2, LayoutGrid, Layers, ArrowDownToLine, ArrowUpFromLine,
@@ -513,12 +523,69 @@ function Pagination({
 // TAB 1 — أصناف (Items)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Map API ItemListItem → local Item shape
+function mapApiItem(api: ItemListItem): Item {
+  const catMap: Record<string, ItemCategory> = {
+    'أغذية': 'feed', 'علف': 'feed', 'Feed': 'feed',
+    'أدوية': 'medicine', 'دواء': 'medicine', 'Medicine': 'medicine',
+    'قطع غيار': 'spare_part', 'Spare': 'spare_part',
+    'زيوت': 'oil_diesel', 'سولار': 'oil_diesel', 'Oil': 'oil_diesel',
+  }
+  const cat = catMap[api.itemCategoryName ?? ''] ?? 'feed'
+  return {
+    id: String(api.id),
+    code: api.itemCode,
+    name: api.name,
+    nameAlt: api.alternateName ?? '',
+    category: cat,
+    uom: api.unitOfMeasureName ?? 'طن',
+    barcode: api.barcode ?? '',
+    minStock: api.minQuantity,
+    maxStock: api.maxQuantity,
+    reorderQty: api.reorderQuantity,
+    avgDeliveryDays: api.averageDeliveryDays,
+    currentStock: api.currentStockQuantity,
+    dailyUsage: api.dailyUsage,
+  }
+}
+
 function ItemsTab() {
   const [items, setItems] = useState<Item[]>(INIT_ITEMS)
+  const [loadingItems, setLoadingItems] = useState(true)
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState<ItemCategory | 'all'>('all')
   const [viewItem, setViewItem] = useState<Item | null>(null)
   const [showAdd, setShowAdd] = useState(false)
+  const [savingItem, setSavingItem] = useState(false)
+
+  // Category DDL for the Add Item form
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([])
+
+  // Fetch items from API
+  const fetchItems = async () => {
+    setLoadingItems(true)
+    try {
+      const res = await itemsApi.getList(1, 200)
+      if (res.isSuccess && res.data?.data?.length) {
+        setItems(res.data.data.map(mapApiItem))
+        console.log('[ItemsTab] Loaded', res.data.data.length, 'items from API')
+      } else {
+        console.warn('[ItemsTab] No data from API, using mock fallback')
+        setItems(INIT_ITEMS)
+      }
+    } catch (e) {
+      console.error('[ItemsTab] Failed to load items:', e)
+      setItems(INIT_ITEMS)
+    } finally {
+      setLoadingItems(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchItems()
+    // Load category dropdown for Add form
+    itemCategoriesApi.getDropdown().then(r => { if (r.isSuccess) setCategories(r.data || []) }).catch(() => {})
+  }, [])
 
   const filtered = useMemo(() => items.filter(it => {
     const q = search.toLowerCase()
@@ -537,14 +604,43 @@ function ItemsTab() {
   const inp = 'w-full h-9 px-3 rounded-[10px] border border-neutral-200 bg-neutral-50 text-[13px] font-cairo text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all placeholder:text-neutral-400'
   const lbl = 'block text-[11px] font-semibold text-neutral-500 mb-1 uppercase tracking-wide'
 
-  const [form, setForm] = useState<Partial<Item>>({ category: 'feed', uom: 'طن', minStock: 0, maxStock: 0, reorderQty: 0, avgDeliveryDays: 3, currentStock: 0, dailyUsage: 0 })
-  const ff = <K extends keyof Item>(k: K, v: Item[K]) => setForm(p => ({ ...p, [k]: v }))
+  const [form, setForm] = useState<Partial<Item & { categoryId?: number }>>({ category: 'feed', uom: 'طن', minStock: 0, maxStock: 0, reorderQty: 0, avgDeliveryDays: 3, currentStock: 0, dailyUsage: 0 })
+  const ff = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm(p => ({ ...p, [k]: v }))
 
-  function saveItem() {
-    if (!form.name || !form.code) return
-    setItems(prev => [...prev, { ...form, id: `i${Date.now()}`, nameAlt: form.nameAlt || '', barcode: form.barcode || '' } as Item])
-    setShowAdd(false)
-    setForm({ category: 'feed', uom: 'طن', minStock: 0, maxStock: 0, reorderQty: 0, avgDeliveryDays: 3, currentStock: 0, dailyUsage: 0 })
+  async function saveItem() {
+    if (!form.name || !form.code) { toast.error('الكود والاسم مطلوبان'); return }
+    setSavingItem(true)
+    try {
+      const catId = form.categoryId ?? categories[0]?.id ?? 1
+      const uomMap: Record<string, number> = { 'طن': 1, 'كج': 2, 'لتر': 3, 'قطعة': 4, 'علبة': 5, 'أمبولة': 6, 'جرام': 7 }
+      const dto = {
+        itemCode: form.code!,
+        name: form.name!,
+        alternateName: form.nameAlt,
+        barcode: form.barcode,
+        itemCategoryId: catId,
+        unitOfMeasureId: uomMap[form.uom ?? 'طن'] ?? 1,
+        itemType: 'Stock',
+        trackingType: 'Quantity',
+        minQuantity: form.minStock ?? 0,
+        maxQuantity: form.maxStock ?? 0,
+        reorderPoint: form.reorderQty ?? 0,
+        reorderQuantity: form.reorderQty ?? 0,
+        dailyUsage: form.dailyUsage ?? 0,
+        averageDeliveryDays: form.avgDeliveryDays ?? 3,
+        status: 'Active',
+      }
+      await itemsApi.create(dto)
+      toast.success('تم إضافة الصنف بنجاح')
+      setShowAdd(false)
+      setForm({ category: 'feed', uom: 'طن', minStock: 0, maxStock: 0, reorderQty: 0, avgDeliveryDays: 3, currentStock: 0, dailyUsage: 0 })
+      await fetchItems()
+    } catch (err) {
+      console.error('[ItemsTab] saveItem error:', err)
+      toast.error('فشل حفظ الصنف: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'))
+    } finally {
+      setSavingItem(false)
+    }
   }
 
   return (
@@ -830,8 +926,23 @@ const emptyWhForm = (): WhFormState => ({
   name: '', type: 'أغذية', status: 'active', responsibleUsers: '', locations: [], notes: '',
 })
 
+// Map API WarehouseItem → local WhItem shape
+function mapApiWarehouse(api: ApiWarehouseItem): WhItem {
+  return {
+    id: String(api.id),
+    code: api.warehouseCode,
+    name: api.name,
+    type: api.warehouseType,
+    responsibleUsers: api.responsibleEmployeeName ? [api.responsibleEmployeeName] : [],
+    status: api.status === 'Active' ? 'active' : 'inactive',
+    locations: [],
+    notes: api.notes ?? '',
+  }
+}
+
 function WarehousesTab() {
   const [warehouses, setWarehouses] = useState<WhItem[]>(INIT_WAREHOUSES)
+  const [loadingWh, setLoadingWh] = useState(true)
   const [viewWh, setViewWh] = useState<WhItem | null>(null)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<WhType | 'all'>('all')
@@ -840,6 +951,28 @@ function WarehousesTab() {
   const [form, setForm] = useState<WhFormState>(emptyWhForm())
   const [locInput, setLocInput] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<WhItem | null>(null)
+  const [savingWh, setSavingWh] = useState(false)
+
+  const fetchWarehouses = async () => {
+    setLoadingWh(true)
+    try {
+      const res = await warehousesApi.getAll()
+      if (res.isSuccess && res.data?.length) {
+        setWarehouses(res.data.map(mapApiWarehouse))
+        console.log('[WarehousesTab] Loaded', res.data.length, 'warehouses from API')
+      } else {
+        console.warn('[WarehousesTab] No data from API, using mock fallback')
+        setWarehouses(INIT_WAREHOUSES)
+      }
+    } catch (e) {
+      console.error('[WarehousesTab] Failed to load warehouses:', e)
+      setWarehouses(INIT_WAREHOUSES)
+    } finally {
+      setLoadingWh(false)
+    }
+  }
+
+  useEffect(() => { fetchWarehouses() }, [])
 
   const filtered = warehouses.filter(w => {
     const q = search.trim().toLowerCase()
@@ -872,25 +1005,34 @@ function WarehousesTab() {
   function removeLoc(idx: number) {
     setForm(f => ({ ...f, locations: f.locations.filter((_, i) => i !== idx) }))
   }
-  function save() {
+  async function save() {
     if (!form.name.trim()) return
-    const users = form.responsibleUsers.split(/[،,]/).map(s => s.trim()).filter(Boolean)
-    if (editWh) {
-      setWarehouses(ws => ws.map(w => w.id !== editWh.id ? w : {
-        ...w, name: form.name, type: form.type, status: form.status,
-        responsibleUsers: users,
-        locations: form.locations.map((n, i) => ({ id: `wl-${Date.now()}-${i}`, name: n })),
+    setSavingWh(true)
+    try {
+      const dto = {
+        warehouseCode: editWh?.code ?? `WH${String(warehouses.length + 1).padStart(3, '0')}`,
+        name: form.name,
+        warehouseType: form.type,
+        status: form.status === 'active' ? 'Active' : 'Inactive',
+        totalCapacity: 0,
+        currentUtilization: 0,
         notes: form.notes,
-      }))
-    } else {
-      setWarehouses(ws => [...ws, {
-        id: `w-${Date.now()}`,
-        code: `WH${String(ws.length + 1).padStart(3, '0')}`,
-        name: form.name, type: form.type, status: form.status,
-        responsibleUsers: users,
-        locations: form.locations.map((n, i) => ({ id: `wl-${Date.now()}-${i}`, name: n })),
-        notes: form.notes,
-      }])
+      }
+      if (editWh) {
+        await warehousesApi.update(Number(editWh.id), { ...dto, id: Number(editWh.id) })
+        toast.success('تم تحديث المخزن بنجاح')
+      } else {
+        await warehousesApi.create(dto)
+        toast.success('تم إضافة المخزن بنجاح')
+      }
+      setShowModal(false)
+      setForm(emptyWhForm())
+      await fetchWarehouses()
+    } catch (err) {
+      console.error('[WarehousesTab] save error:', err)
+      toast.error('فشل حفظ المخزن: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'))
+    } finally {
+      setSavingWh(false)
     }
     setShowModal(false)
   }
@@ -1895,7 +2037,8 @@ const emptyReceiptForm = (): ReceiptFormState => ({
 })
 
 function ReceiptsTab() {
-  const [receipts, setReceipts] = useState<ReceiptTx[]>(INIT_RECEIPTS)
+  const [receipts, setReceipts] = useState<ReceiptTx[]>([])
+  const [loadingReceipts, setLoadingReceipts] = useState(true)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<ReceiptType | 'all'>('all')
   const [showModal, setShowModal] = useState(false)
@@ -1904,6 +2047,95 @@ function ReceiptsTab() {
   const [form, setForm] = useState<ReceiptFormState>(emptyReceiptForm())
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Load real warehouse and item data for dropdowns
+  const [warehouses, setWarehouses] = useState<Array<{ id: number; name: string }>>([])
+  const [items, setItems] = useState<Array<{ id: number; name: string }>>([])
+  const [loadingLookups, setLoadingLookups] = useState(true)
+
+  // Initialize - load lookups
+  useEffect(() => {
+    (async () => {
+      try {
+        console.log('[ReceiptsTab] Loading warehouses and items...')
+        const [whRes, itRes] = await Promise.all([warehousesApi.getDropdown(), itemsApi.getDropdown()])
+        if (whRes.isSuccess) {
+          setWarehouses(whRes.data || [])
+          console.log('[ReceiptsTab] Loaded warehouses:', whRes.data)
+        }
+        if (itRes.isSuccess) {
+          setItems(itRes.data || [])
+          console.log('[ReceiptsTab] Loaded items:', itRes.data)
+        }
+      } catch (e) {
+        console.error('[ReceiptsTab] Failed to load lookups:', e)
+        toast.error('فشل تحميل المخازن والأصناف')
+      } finally {
+        setLoadingLookups(false)
+      }
+    })()
+  }, [])
+
+  // Fetch receipts from API
+  const fetchReceipts = async () => {
+    setLoadingReceipts(true)
+    try {
+      console.log('[ReceiptsTab] Fetching receipts from API...')
+      const res = await inventoryTransactionsApi.getReceipts(1, 100)
+      if (res.isSuccess && res.data?.data) {
+        // Map API response to local ReceiptTx shape
+        const mapped: ReceiptTx[] = res.data.data.map((tx) => {
+          const typeMap: Record<string, ReceiptType> = {
+            PurchaseReceipt: 'from_supplier',
+            OpeningBalance: 'opening_balance',
+            ReturnedGoods: 'return',
+          }
+          const firstLine = tx.lines?.[0]
+          return {
+            id: String(tx.id),
+            serial: tx.transactionNumber,
+            type: typeMap[tx.transactionType] ?? 'from_supplier',
+            date: tx.transactionDate?.slice(0, 10) ?? '',
+            warehouseName: tx.warehouseName ?? '',
+            supplierName: tx.partnerName ?? '—',
+            supplierInvoice: tx.externalReferenceNumber ?? '—',
+            invoiceValue: firstLine ? firstLine.quantity * firstLine.unitPrice : 0,
+            itemName: firstLine?.itemName ?? '',
+            qty: firstLine?.quantity ?? 0,
+            price: firstLine?.unitPrice ?? 0,
+            weighbridgeCard: tx.weightBridgeReference ?? '',
+            photoUrl: tx.invoiceImageUrl ?? '',
+            items: (tx.lines ?? []).map((l) => ({
+              id: String(l.id),
+              itemName: l.itemName,
+              qty: l.quantity,
+              weight: l.weight,
+              price: l.unitPrice,
+              location: l.warehouseLocationName ?? '',
+            })),
+            totalValue: (tx.lines ?? []).reduce((s, l) => s + l.totalPrice, 0),
+            status: tx.status === 'Completed' ? 'done' : tx.status === 'Pending' ? 'pending' : 'draft' as TransactionStatus,
+            notes: tx.notes ?? '',
+          }
+        })
+        setReceipts(mapped)
+      } else {
+        console.warn('[ReceiptsTab] API returned no data, using mock fallback')
+        setReceipts(INIT_RECEIPTS)
+      }
+    } catch (e) {
+      console.error('[ReceiptsTab] Failed to fetch receipts:', e)
+      toast.error('فشل تحميل الاستلامات')
+      setReceipts(INIT_RECEIPTS) // Fallback to mock data while backend unavailable
+    } finally {
+      setLoadingReceipts(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchReceipts()
+  }, [])
+
+  // Filter receipts
   const filtered = receipts.filter(r => {
     const q = search.toLowerCase()
     const mq = !q || r.serial.toLowerCase().includes(q) || r.supplierName.includes(search)
@@ -1914,37 +2146,69 @@ function ReceiptsTab() {
 
   const totalDone = receipts.filter(r => r.status === 'done').reduce((s, r) => s + r.totalValue, 0)
 
+  // Pagination
   const [rcptPage, setRcptPage] = useState(1)
   useEffect(() => { setRcptPage(1) }, [search, typeFilter])
   const rcptTotalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pagedReceipts = filtered.slice((rcptPage - 1) * PAGE_SIZE, rcptPage * PAGE_SIZE)
 
+  // Form handlers
   function ff(k: keyof ReceiptFormState, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
-  function saveReceipt() {
-    if (!form.warehouseName || !form.itemName) return
-    const qty = parseFloat(form.qty) || 0
-    const price = parseFloat(form.price) || 0
-    const inv = parseFloat(form.invoiceValue) || qty * price
-    const newR: ReceiptTx = {
-      id: `r-${Date.now()}`,
-      serial: `RCV-${new Date().getFullYear()}-${String(receipts.length + 1).padStart(3, '0')}`,
-      type: form.type, date: form.date,
-      warehouseName: form.warehouseName,
-      supplierName: form.supplierName || '—',
-      supplierInvoice: form.supplierInvoice || '—',
-      invoiceValue: inv,
-      itemName: form.itemName, qty, price,
-      weighbridgeCard: form.weighbridgeCard,
-      photoUrl: form.photoName,
-      items: [{ id: `ri-${Date.now()}`, itemName: form.itemName, qty, weight: qty, price, location: '' }],
-      totalValue: inv || qty * price,
-      status: form.status,
-      notes: form.notes,
+  // Save receipt via real API
+  async function saveReceipt() {
+    console.log('[ReceiptsTab] saveReceipt starting...', { warehouse: form.warehouseName, item: form.itemName })
+    toast.info('جاري حفظ الاستلام...', { id: 'saving-receipt' })
+
+    if (!form.warehouseName || !form.itemName) {
+      toast.error('المخزن والصنف مطلوبان')
+      console.log('[ReceiptsTab] Validation failed - missing warehouse or item')
+      return
     }
-    setReceipts(rs => [newR, ...rs])
-    setShowModal(false)
-    setForm(emptyReceiptForm())
+
+    try {
+      const whId = warehouses.find(w => w.name === form.warehouseName)?.id
+      const itemId = items.find(i => i.name === form.itemName)?.id
+      if (!whId || !itemId) {
+        toast.error('لم يتم العثور على المخزن أو الصنف في النظام')
+        console.warn('[ReceiptsTab] Warehouse/item lookup failed', { whId, itemId })
+        return
+      }
+
+      const qty = parseFloat(form.qty) || 0
+      const price = parseFloat(form.price) || 0
+
+      const transactionTypeMap: Record<ReceiptType, string> = {
+        from_supplier: 'PurchaseReceipt',
+        opening_balance: 'OpeningBalance',
+        return: 'ReturnedGoods',
+      }
+
+      const dto: CreateInventoryTransactionRequest = {
+        transactionDate: form.date,
+        transactionType: transactionTypeMap[form.type],
+        transactionDirection: 'Inbound',
+        warehouseId: whId,
+        partnerId: form.type === 'from_supplier' ? 0 : undefined,
+        externalReferenceNumber: form.supplierInvoice || undefined,
+        weightBridgeReference: form.weighbridgeCard || undefined,
+        invoiceImageUrl: form.photoName || undefined,
+        status: form.status === 'done' ? 'Completed' : form.status === 'pending' ? 'Pending' : 'Draft',
+        notes: form.notes || undefined,
+        requiresCostCenter: false,
+        lines: [{ itemId, warehouseId: whId, quantity: qty, weight: qty, unitPrice: price }],
+      }
+
+      console.log('[ReceiptsTab] Calling inventoryTransactionsApi.create with DTO:', dto)
+      await inventoryTransactionsApi.create(dto)
+      toast.success('تم حفظ الاستلام بنجاح')
+      setShowModal(false)
+      setForm(emptyReceiptForm())
+      await fetchReceipts()
+    } catch (err) {
+      console.error('[ReceiptsTab] Error saving receipt:', err)
+      toast.error('فشل حفظ الاستلام: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'))
+    }
   }
 
   function confirmDelete() {
@@ -1953,8 +2217,9 @@ function ReceiptsTab() {
     setDeleteTarget(null)
   }
 
-  const whNames = INIT_WAREHOUSES.map(w => w.name)
-  const itemNames = INIT_ITEMS.map(i => i.name)
+  // Dropdown options from real data
+  const whNames = warehouses.map(w => w.name)
+  const itemNames = items.map(i => i.name)
 
   const inp = 'w-full h-9 px-3 rounded-[8px] border border-neutral-200 font-cairo text-[13px] text-neutral-900 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/30 bg-white placeholder:text-neutral-300'
   const lbl = 'block font-cairo font-semibold text-[11px] text-neutral-500 mb-1'
@@ -2316,7 +2581,8 @@ const emptyIssueForm = (): IssueFormState => ({
 })
 
 function IssuesTab() {
-  const [issues, setIssues] = useState<IssueTx[]>(INIT_ISSUES)
+  const [issues, setIssues] = useState<IssueTx[]>([])
+  const [loadingIssues, setLoadingIssues] = useState(true)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<IssueType | 'all'>('all')
   const [viewI, setViewI] = useState<IssueTx | null>(null)
@@ -2324,36 +2590,116 @@ function IssuesTab() {
   const [form, setForm] = useState<IssueFormState>(emptyIssueForm())
   const fileRef = useRef<HTMLInputElement>(null)
 
-  function fi(k: keyof IssueFormState, v: string) { setForm(f => ({ ...f, [k]: v })) }
+  // Load real warehouse and item data for dropdowns
+  const [warehouses, setWarehouses] = useState<Array<{ id: number; name: string }>>([])
+  const [items, setItems] = useState<Array<{ id: number; name: string }>>([])
+  const [loadingLookups, setLoadingLookups] = useState(true)
 
-  function saveIssue() {
-    if (!form.warehouseName || !form.itemName) return
-    const qty = parseFloat(form.qty) || 0
-    const price = parseFloat(form.price) || 0
-    const newI: IssueTx = {
-      id: `is-${Date.now()}`,
-      serial: `ISS-${new Date().getFullYear()}-${String(issues.length + 1).padStart(3, '0')}`,
-      type: form.type, date: form.date,
-      warehouseName: form.warehouseName,
-      destination: form.destination || '—',
-      ...(form.type === 'feeding' && form.mixerName ? { mixerName: form.mixerName, mixerCount: parseInt(form.mixerCount) || 1 } : {}),
-      ...(form.type === 'sales' && form.invoiceRef ? { invoiceRef: form.invoiceRef, clientName: form.clientName } : {}),
-      ...(form.type === 'internal' && form.costCenter ? { costCenter: form.costCenter } : {}),
-      itemName: form.itemName, qty, price,
-      weighbridgeCard: form.weighbridgeCard,
-      photoUrl: form.photoName,
-      items: [{ id: `ii-${Date.now()}`, itemName: form.itemName, qty, weight: qty, price, location: form.warehouseName }],
-      totalValue: qty * price,
-      status: form.status,
-      notes: form.notes,
+  // Fetch issues from API
+  const fetchIssues = async () => {
+    setLoadingIssues(true)
+    try {
+      console.log('[IssuesTab] Fetching issues from API...')
+      const res = await inventoryTransactionsApi.getIssues(1, 100)
+      if (res.isSuccess && res.data?.data) {
+        const typeMap: Record<string, IssueType> = {
+          Feeding: 'feeding',
+          SalesInvoice: 'sales',
+          InternalTransfer: 'internal',
+        }
+        const mapped: IssueTx[] = res.data.data.map((tx) => {
+          const firstLine = tx.lines?.[0]
+          return {
+            id: String(tx.id),
+            serial: tx.transactionNumber,
+            type: typeMap[tx.transactionType] ?? 'internal',
+            date: tx.transactionDate?.slice(0, 10) ?? '',
+            warehouseName: tx.warehouseName ?? '',
+            destination: tx.costCenterName ?? tx.partnerName ?? '',
+            invoiceRef: tx.externalReferenceNumber,
+            itemName: firstLine?.itemName ?? '',
+            qty: firstLine?.quantity ?? 0,
+            price: firstLine?.unitPrice ?? 0,
+            weighbridgeCard: tx.weightBridgeReference,
+            photoUrl: tx.invoiceImageUrl,
+            items: (tx.lines ?? []).map((l) => ({
+              id: String(l.id),
+              itemName: l.itemName,
+              qty: l.quantity,
+              weight: l.weight,
+              price: l.unitPrice,
+              location: l.warehouseLocationName ?? '',
+            })),
+            totalValue: (tx.lines ?? []).reduce((s, l) => s + l.totalPrice, 0),
+            status: tx.status === 'Completed' ? 'done' : tx.status === 'Pending' ? 'pending' : 'draft' as TransactionStatus,
+            notes: tx.notes ?? '',
+          }
+        })
+        setIssues(mapped)
+      } else {
+        console.warn('[IssuesTab] API returned no data, using mock fallback')
+        setIssues(INIT_ISSUES)
+      }
+    } catch (e) {
+      console.error('[IssuesTab] Failed to fetch issues:', e)
+      toast.error('فشل تحميل الصرف')
+      setIssues(INIT_ISSUES) // Fallback while backend unavailable
+    } finally {
+      setLoadingIssues(false)
     }
-    setIssues(prev => [newI, ...prev])
-    setShowModal(false)
-    setForm(emptyIssueForm())
   }
 
-  const whNames = INIT_WAREHOUSES.map(w => w.name)
-  const itemNames = INIT_ITEMS.map(i => i.name)
+  useEffect(() => {
+    (async () => {
+      try {
+        console.log('[IssuesTab] Loading warehouses and items...')
+        const [whRes, itRes] = await Promise.all([warehousesApi.getDropdown(), itemsApi.getDropdown()])
+        if (whRes.isSuccess) setWarehouses(whRes.data || [])
+        if (itRes.isSuccess) setItems(itRes.data || [])
+      } catch (e) { console.error('[IssuesTab] Failed to load lookups:', e); toast.error('فشل تحميل البيانات المساعدة') }
+      finally { setLoadingLookups(false) }
+    })()
+    fetchIssues()
+  }, [])
+
+  function fi(k: keyof IssueFormState, v: string) { setForm(f => ({ ...f, [k]: v })) }
+
+  async function saveIssue() {
+    console.log('[IssuesTab] saveIssue starting...', { warehouse: form.warehouseName, item: form.itemName })
+    toast.info('جاري حفظ الصرف...', { id: 'saving-issue' })
+    if (!form.warehouseName || !form.itemName) { toast.error('المخزن والصنف مطلوبان'); console.log('[IssuesTab] Validation failed'); return }
+    try {
+      const whId = warehouses.find(w => w.name === form.warehouseName)?.id
+      const itemId = items.find(i => i.name === form.itemName)?.id
+      if (!whId || !itemId) { toast.error('لم يتم العثور على المخزن أو الصنف'); return }
+      const qty = parseFloat(form.qty) || 0
+      const price = parseFloat(form.price) || 0
+      const transactionType = form.type === 'feeding' ? 'Feeding' : form.type === 'sales' ? 'SalesInvoice' : 'InternalTransfer'
+      const dto: CreateInventoryTransactionRequest = {
+        transactionDate: form.date,
+        transactionType,
+        transactionDirection: 'Outbound',
+        warehouseId: whId,
+        costCenterId: form.costCenter ? 0 : undefined,
+        externalReferenceNumber: form.type === 'sales' ? form.invoiceRef : undefined,
+        weightBridgeReference: form.weighbridgeCard || undefined,
+        invoiceImageUrl: form.photoName || undefined,
+        status: form.status === 'done' ? 'Completed' : form.status === 'pending' ? 'Pending' : 'Draft',
+        notes: form.notes || undefined,
+        lines: [{ itemId, warehouseId: whId, quantity: qty, weight: qty, unitPrice: price, notes: undefined }],
+        requiresCostCenter: form.type === 'feeding' || form.type === 'internal',
+      }
+      console.log('[IssuesTab] Creating transaction:', dto)
+      await inventoryTransactionsApi.create(dto)
+      toast.success('تم حفظ الصرف بنجاح')
+      setShowModal(false)
+      setForm(emptyIssueForm())
+      await fetchIssues()
+    } catch (err) { console.error('[IssuesTab] Error saving issue:', err); toast.error('فشل حفظ الصرف: ' + (err instanceof Error ? err.message : 'خطأ غير معروف')) }
+  }
+
+  const whNames = warehouses.map(w => w.name)
+  const itemNames = items.map(i => i.name)
 
   const filtered = issues.filter(is => {
     const q = search.toLowerCase()

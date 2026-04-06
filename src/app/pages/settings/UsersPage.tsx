@@ -5,8 +5,9 @@ import {
   Edit2, Trash2, Check, ChevronRight, ChevronLeft,
   ChevronsRight, ChevronsLeft, CornerDownLeft, Eye,
   Mail, ShieldCheck, Key, CalendarDays, StickyNote,
-  Shield, User, Lock, RefreshCw,
+  Shield, User, Lock, RefreshCw, Loader2,
 } from 'lucide-react'
+import { usersApi, type UserListItem, type AddUserRequest, type UpdateUserRequest } from '../../services/api'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -28,26 +29,9 @@ interface SystemUser {
   createdAt: string
   notes: string
   avatar: string
+  department?: string
+  phoneNumber?: string
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock Data
-// ─────────────────────────────────────────────────────────────────────────────
-
-const INITIAL_USERS: SystemUser[] = [
-  { id:'u1',  name:'أحمد محمود النجار',      email:'ahmed@negmfarm.com',    role:'manager',      status:'active',   lastLogin:'2026-03-30T09:15:00', createdAt:'2023-01-10', notes:'مدير النظام الرئيسي، صلاحيات كاملة',             avatar:'أ' },
-  { id:'u2',  name:'فاطمة محمد البدوي',      email:'fatima@negmfarm.com',   role:'manager',      status:'active',   lastLogin:'2026-03-30T14:40:00', createdAt:'2023-01-15', notes:'مسؤولة عن الإدارة اليومية للمزرعة',              avatar:'ف' },
-  { id:'u3',  name:'كريم عبدالله الشيخ',     email:'karim@negmfarm.com',    role:'veterinarian', status:'active',   lastLogin:'2026-03-29T11:22:00', createdAt:'2023-03-05', notes:'دكتور بيطري أول، رقابة كاملة على صحة الرؤوس',   avatar:'ك' },
-  { id:'u4',  name:'سارة طارق حجازي',        email:'sara@negmfarm.com',     role:'accountant',   status:'active',   lastLogin:'2026-03-30T08:55:00', createdAt:'2023-04-12', notes:'مسؤولة عن حسابات الموردين والعملاء',              avatar:'س' },
-  { id:'u5',  name:'محمد علي حسن',           email:'mohamed@negmfarm.com',  role:'purchasing',   status:'active',   lastLogin:'2026-03-28T16:30:00', createdAt:'2023-06-01', notes:'',                                                avatar:'م' },
-  { id:'u6',  name:'نور إبراهيم طه',         email:'nour@negmfarm.com',     role:'warehouse',    status:'active',   lastLogin:'2026-03-27T10:10:00', createdAt:'2023-08-20', notes:'مسؤولة عن مخزن الأعلاف',                         avatar:'ن' },
-  { id:'u7',  name:'عمر رمضان درويش',        email:'omar@negmfarm.com',     role:'warehouse',    status:'active',   lastLogin:'2026-03-30T07:45:00', createdAt:'2024-01-08', notes:'',                                                avatar:'ع' },
-  { id:'u8',  name:'هاني فريد عوض',          email:'hany@negmfarm.com',     role:'warehouse',    status:'inactive', lastLogin:'2025-12-15T09:00:00', createdAt:'2024-02-14', notes:'حساب موقوف مؤقتاً',                               avatar:'ه' },
-  { id:'u9',  name:'ياسمين سامي الغزالي',    email:'yasmine@negmfarm.com',  role:'purchasing',   status:'active',   lastLogin:'2026-03-29T13:20:00', createdAt:'2024-03-01', notes:'',                                                avatar:'ي' },
-  { id:'u10', name:'دينا عمر الجندي',        email:'dina@negmfarm.com',     role:'accountant',   status:'active',   lastLogin:'2026-03-25T11:00:00', createdAt:'2024-05-10', notes:'',                                                avatar:'د' },
-  { id:'u11', name:'مصطفى سامي منصور',       email:'mostafa@negmfarm.com',  role:'purchasing',   status:'inactive', lastLogin:'2025-11-20T08:30:00', createdAt:'2024-07-22', notes:'موظف سابق، الحساب غير مفعّل',                    avatar:'م' },
-  { id:'u12', name:'شيرين أحمد سلامة',       email:'shirin@negmfarm.com',   role:'accountant',   status:'active',   lastLogin:'2026-03-30T10:05:00', createdAt:'2024-09-01', notes:'',                                                avatar:'ش' },
-]
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config
@@ -94,36 +78,27 @@ function initials(name: string) {
   return name.trim().charAt(0)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// usePagination hook
-// ─────────────────────────────────────────────────────────────────────────────
-
-function usePagination<T>(items: T[], defaultPageSize = 7) {
-  const [page, setPage]         = useState(1)
-  const [pageSize, setPageSize] = useState(defaultPageSize)
-
-  const totalPages = Math.max(1, Math.ceil(items.length / pageSize))
-
-  useEffect(() => {
-    setPage(p => Math.min(p, Math.max(1, Math.ceil(items.length / pageSize))))
-  }, [items.length, pageSize])
-
-  const slice = useMemo(() => {
-    const start = (page - 1) * pageSize
-    return items.slice(start, start + pageSize)
-  }, [items, page, pageSize])
-
-  const goTo    = useCallback((p: number) => setPage(Math.min(Math.max(1, p), Math.max(1, Math.ceil(items.length / pageSize)))), [items.length, pageSize])
-  const goFirst = useCallback(() => setPage(1), [])
-  const goPrev  = useCallback(() => setPage(p => Math.max(1, p - 1)), [])
-  const goNext  = useCallback(() => setPage(p => Math.min(Math.ceil(items.length / pageSize), p + 1)), [items.length, pageSize])
-  const goLast  = useCallback(() => setPage(Math.max(1, Math.ceil(items.length / pageSize))), [items.length, pageSize])
-
-  const from = items.length === 0 ? 0 : (page - 1) * pageSize + 1
-  const to   = Math.min(page * pageSize, items.length)
-
-  return { page, setPage: goTo, pageSize, setPageSize, totalPages, slice, goFirst, goPrev, goNext, goLast, from, to, total: items.length }
+function mapApiUserToSystemUser(u: UserListItem): SystemUser {
+  const role = (u.role?.toLowerCase() || u.roles?.[0]?.toLowerCase() || 'warehouse') as UserRole
+  const status = (u.status?.toLowerCase() || 'active') as UserStatus
+  return {
+    id: u.id,
+    name: u.fullName,
+    email: u.email,
+    role: ROLE_CONFIG[role] ? role : 'warehouse',
+    status: STATUS_CONFIG[status] ? status : 'active',
+    lastLogin: u.lastLoginAt || '',
+    createdAt: u.createdAt,
+    notes: u.notes || '',
+    avatar: initials(u.fullName || ''),
+    department: u.department || undefined,
+    phoneNumber: u.phoneNumber || undefined,
+  }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pagination helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 function getPageNumbers(current: number, total: number): (number | '...')[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
@@ -226,7 +201,7 @@ function Pagination({ page, totalPages, pageSize, from, to, total, onPage, onPag
 // ─────────────────────────────────────────────────────────────────────────────
 
 function RoleBadge({ role }: { role: UserRole }) {
-  const c = ROLE_CONFIG[role]
+  const c = ROLE_CONFIG[role] || ROLE_CONFIG.warehouse
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${c.bg} ${c.color}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{c.label}
@@ -235,7 +210,7 @@ function RoleBadge({ role }: { role: UserRole }) {
 }
 
 function StatusBadge({ status }: { status: UserStatus }) {
-  const c = STATUS_CONFIG[status]
+  const c = STATUS_CONFIG[status] || STATUS_CONFIG.active
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ring-1 ${c.bg} ${c.color} ${c.ring}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${status==='active'?'animate-pulse':''}`} />{c.label}
@@ -244,7 +219,7 @@ function StatusBadge({ status }: { status: UserStatus }) {
 }
 
 function AvatarCircle({ letter, role, size='md' }: { letter:string; role:UserRole; size?:'sm'|'md'|'lg' }) {
-  const c = ROLE_CONFIG[role]
+  const c = ROLE_CONFIG[role] || ROLE_CONFIG.warehouse
   const sz = size==='lg' ? 'w-16 h-16 text-[22px]' : size==='sm' ? 'w-8 h-8 text-[12px]' : 'w-9 h-9 text-[14px]'
   return (
     <div className={`${sz} rounded-full ${c.bg} flex items-center justify-center shrink-0 ring-2 ring-white shadow-sm`}>
@@ -273,8 +248,8 @@ function SectionHeading({ icon: Icon, label, color = 'text-primary-500' }: { ico
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ViewDrawer({ user, onClose, onEdit }: { user: SystemUser; onClose: () => void; onEdit: () => void }) {
-  const rc = ROLE_CONFIG[user.role]
-  const sc = STATUS_CONFIG[user.status]
+  const rc = ROLE_CONFIG[user.role] || ROLE_CONFIG.warehouse
+  const sc = STATUS_CONFIG[user.status] || STATUS_CONFIG.active
 
   function InfoRow({ icon: Icon, label, value, ltr }: { icon: React.ElementType; label: string; value: string; ltr?: boolean }) {
     return (
@@ -334,7 +309,7 @@ function ViewDrawer({ user, onClose, onEdit }: { user: SystemUser; onClose: () =
             <SectionHeading icon={User} label="معلومات الحساب" />
             <InfoRow icon={User}        label="الاسم الكامل"        value={user.name} />
             <InfoRow icon={Mail}        label="البريد الإلكتروني"   value={user.email} ltr />
-            <InfoRow icon={ShieldCheck} label="الدور الوظيفي"       value={ROLE_CONFIG[user.role].label} />
+            <InfoRow icon={ShieldCheck} label="الدور الوظيفي"       value={(ROLE_CONFIG[user.role] || ROLE_CONFIG.warehouse).label} />
           </div>
 
           <div>
@@ -374,7 +349,11 @@ const EMPTY_FORM: FormData = {
   name: '', email: '', password: '', role: 'warehouse', status: 'active', notes: '',
 }
 
-interface ModalProps { user?: SystemUser | null; onClose: () => void; onSave: (u: Omit<SystemUser, 'id'>) => void }
+interface ModalProps {
+  user?: SystemUser | null
+  onClose: () => void
+  onSave: (data: FormData, isEdit: boolean, userId?: string) => Promise<void>
+}
 
 function UserModal({ user, onClose, onSave }: ModalProps) {
   const isEdit = !!user
@@ -385,10 +364,13 @@ function UserModal({ user, onClose, onSave }: ModalProps) {
   )
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
   const [showPassword, setShowPassword] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [apiError, setApiError] = useState('')
 
   function set<K extends keyof FormData>(k: K, v: FormData[K]) {
     setForm(f => ({ ...f, [k]: v }))
     setErrors(e => ({ ...e, [k]: undefined }))
+    setApiError('')
   }
 
   function validate() {
@@ -397,24 +379,22 @@ function UserModal({ user, onClose, onSave }: ModalProps) {
     if (!form.email.trim()) e.email = 'البريد الإلكتروني مطلوب'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'بريد إلكتروني غير صحيح'
     if (!isEdit && !form.password.trim()) e.password = 'كلمة المرور مطلوبة'
-    else if (form.password && form.password.length < 8) e.password = 'يجب أن تكون 8 أحرف على الأقل'
+    else if (form.password && form.password.length < 6) e.password = 'يجب أن تكون 6 أحرف على الأقل'
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!validate()) return
-    const now = new Date().toISOString()
-    onSave({
-      name:      form.name.trim(),
-      email:     form.email.trim().toLowerCase(),
-      role:      form.role,
-      status:    form.status,
-      notes:     form.notes.trim(),
-      lastLogin: isEdit ? user!.lastLogin : '',
-      createdAt: isEdit ? user!.createdAt : now.split('T')[0],
-      avatar:    initials(form.name),
-    })
+    setSaving(true)
+    setApiError('')
+    try {
+      await onSave(form, isEdit, user?.id)
+    } catch (err: any) {
+      setApiError(err.message || 'حدث خطأ أثناء الحفظ')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const inputBase = 'w-full h-10 px-3 rounded-[10px] border bg-white font-cairo text-[13px] text-neutral-900 placeholder:text-neutral-400 outline-none transition-all'
@@ -459,6 +439,12 @@ function UserModal({ user, onClose, onSave }: ModalProps) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          {apiError && (
+            <div className="bg-red-50 border border-red-200 rounded-[10px] px-4 py-2.5">
+              <p className="font-cairo text-[12px] text-red-600">{apiError}</p>
+            </div>
+          )}
+
           {/* الاسم */}
           <div>
             <FieldLabel label="الاسم الكامل" required />
@@ -573,9 +559,10 @@ function UserModal({ user, onClose, onSave }: ModalProps) {
         <div className="shrink-0 flex gap-3 px-6 py-4 border-t border-neutral-100 bg-neutral-50/60">
           <button
             onClick={handleSave}
-            className="flex-1 h-10 flex items-center justify-center gap-2 bg-primary-500 text-white rounded-[10px] font-cairo font-bold text-[13px] hover:bg-primary-600 active:scale-[0.98] transition-all shadow-sm"
+            disabled={saving}
+            className="flex-1 h-10 flex items-center justify-center gap-2 bg-primary-500 text-white rounded-[10px] font-cairo font-bold text-[13px] hover:bg-primary-600 active:scale-[0.98] transition-all shadow-sm disabled:opacity-60"
           >
-            <Check size={14} />
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
             {isEdit ? 'حفظ التعديلات' : 'إضافة المستخدم'}
           </button>
           <button
@@ -595,7 +582,14 @@ function UserModal({ user, onClose, onSave }: ModalProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<SystemUser[]>(INITIAL_USERS)
+  const [users, setUsers] = useState<SystemUser[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Server pagination state
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
 
   // UI State
   const [search,        setSearch]        = useState('')
@@ -605,48 +599,103 @@ export default function UsersPage() {
   const [editUser,      setEditUser]      = useState<SystemUser | null | undefined>(undefined)
   const [deleteTarget,  setDeleteTarget]  = useState<SystemUser | null>(null)
 
-  // Filtered list
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return users.filter(u => {
-      const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-      const matchRole   = filterRole   === 'all' || u.role   === filterRole
-      const matchStatus = filterStatus === 'all' || u.status === filterStatus
-      return matchSearch && matchRole && matchStatus
-    })
-  }, [users, search, filterRole, filterStatus])
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1) }, 400)
+    return () => clearTimeout(t)
+  }, [search])
 
-  const pag = usePagination(filtered, 10)
+  // Fetch users from API
+  const fetchUsers = useCallback(async () => {
+    setLoading(true)
+    try {
+      const result = await usersApi.getList({
+        page,
+        pageSize,
+        search: debouncedSearch || undefined,
+        roleFilter: filterRole !== 'all' ? filterRole : undefined,
+        statusFilter: filterStatus !== 'all' ? filterStatus : undefined,
+      })
+      if (result.isSuccess && result.data) {
+        const mapped = (result.data.data || []).map(mapApiUserToSystemUser)
+        setUsers(mapped)
+        setTotalCount(result.data.totalCount || mapped.length)
+        setTotalPages(result.data.totalPages || 1)
+      }
+    } catch (err) {
+      console.error('Failed to fetch users:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [page, pageSize, debouncedSearch, filterRole, filterStatus])
 
-  // Stats
+  useEffect(() => { fetchUsers() }, [fetchUsers])
+
+  // Stats (from current page for now — could be a separate stats endpoint)
   const stats = useMemo(() => ({
-    total:    users.length,
+    total:    totalCount,
     active:   users.filter(u => u.status === 'active').length,
     inactive: users.filter(u => u.status === 'inactive').length,
     admins:   users.filter(u => u.role === 'manager').length,
-  }), [users])
+  }), [users, totalCount])
+
+  // Pagination computed
+  const from = totalCount === 0 ? 0 : (page - 1) * pageSize + 1
+  const to   = Math.min(page * pageSize, totalCount)
 
   // Handlers
-  function handleSave(data: Omit<SystemUser, 'id'>) {
-    if (editUser) {
-      setUsers(prev => prev.map(u => u.id === editUser.id ? { ...data, id: editUser.id } : u))
+  async function handleSave(data: FormData, isEdit: boolean, userId?: string) {
+    if (isEdit && userId) {
+      const dto: UpdateUserRequest = {
+        id: userId,
+        fullName: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
+        role: data.role,
+        status: data.status,
+        notes: data.notes.trim() || undefined,
+      }
+      await usersApi.update(userId, dto)
+      // If password provided, also reset it
+      if (data.password.trim()) {
+        await usersApi.resetPassword(userId, data.password.trim())
+      }
     } else {
-      const newUser: SystemUser = { ...data, id: `u${Date.now()}` }
-      setUsers(prev => [newUser, ...prev])
+      const dto: AddUserRequest = {
+        fullName: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
+        password: data.password.trim(),
+        role: data.role,
+        status: data.status,
+        notes: data.notes.trim() || undefined,
+      }
+      await usersApi.create(dto)
     }
     setEditUser(undefined)
+    fetchUsers()
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleteTarget) return
-    setUsers(prev => prev.filter(u => u.id !== deleteTarget.id))
-    if (viewUser?.id === deleteTarget.id) setViewUser(null)
-    setDeleteTarget(null)
+    try {
+      await usersApi.delete(deleteTarget.id)
+      if (viewUser?.id === deleteTarget.id) setViewUser(null)
+      setDeleteTarget(null)
+      fetchUsers()
+    } catch (err) {
+      console.error('Failed to delete user:', err)
+      setDeleteTarget(null)
+    }
   }
 
   function openEdit(u: SystemUser) {
     setViewUser(null)
     setEditUser(u)
+  }
+
+  function handlePageSizeChange(newSize: number) {
+    setPageSize(newSize)
+    setPage(1)
   }
 
   const hasFilters = search || filterRole !== 'all' || filterStatus !== 'all'
@@ -711,7 +760,7 @@ export default function UsersPage() {
 
             {/* Role filter */}
             <select
-              value={filterRole} onChange={e => setFilterRole(e.target.value as UserRole | 'all')}
+              value={filterRole} onChange={e => { setFilterRole(e.target.value as UserRole | 'all'); setPage(1) }}
               className="h-9 px-3 rounded-[10px] border border-neutral-200 bg-neutral-50 font-cairo text-[12px] text-neutral-700 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
             >
               <option value="all">كل الأدوار</option>
@@ -720,7 +769,7 @@ export default function UsersPage() {
 
             {/* Status filter */}
             <select
-              value={filterStatus} onChange={e => setFilterStatus(e.target.value as UserStatus | 'all')}
+              value={filterStatus} onChange={e => { setFilterStatus(e.target.value as UserStatus | 'all'); setPage(1) }}
               className="h-9 px-3 rounded-[10px] border border-neutral-200 bg-neutral-50 font-cairo text-[12px] text-neutral-700 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
             >
               <option value="all">كل الحالات</option>
@@ -731,7 +780,7 @@ export default function UsersPage() {
             {/* Clear filters */}
             {hasFilters && (
               <button
-                onClick={() => { setSearch(''); setFilterRole('all'); setFilterStatus('all') }}
+                onClick={() => { setSearch(''); setFilterRole('all'); setFilterStatus('all'); setPage(1) }}
                 className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[10px] border border-neutral-200 text-neutral-500 font-cairo text-[12px] hover:bg-neutral-50 transition-colors"
               >
                 <X size={12} /> مسح
@@ -741,105 +790,112 @@ export default function UsersPage() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px]">
-              <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50/70">
-                  {['المستخدم', 'البريد الإلكتروني', 'الدور', 'الحالة', 'آخر دخول', ''].map(h => (
-                    <th key={h} className="px-5 py-3 text-start font-cairo font-bold text-[11px] text-neutral-500 uppercase tracking-wide whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-50">
-                {pag.slice.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-16 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center">
-                          <Users size={24} className="text-neutral-400" />
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 size={28} className="animate-spin text-primary-500" />
+              </div>
+            ) : (
+              <table className="w-full min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-neutral-100 bg-neutral-50/70">
+                    {['المستخدم', 'البريد الإلكتروني', 'الدور', 'الحالة', 'آخر دخول', ''].map(h => (
+                      <th key={h} className="px-5 py-3 text-start font-cairo font-bold text-[11px] text-neutral-500 uppercase tracking-wide whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-50">
+                  {users.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center">
+                            <Users size={24} className="text-neutral-400" />
+                          </div>
+                          <p className="font-cairo font-semibold text-[14px] text-neutral-500">
+                            {hasFilters ? 'لا توجد نتائج مطابقة' : 'لا يوجد مستخدمون'}
+                          </p>
+                          {hasFilters && (
+                            <button
+                              onClick={() => { setSearch(''); setFilterRole('all'); setFilterStatus('all'); setPage(1) }}
+                              className="font-cairo text-[12px] text-primary-500 hover:underline"
+                            >مسح الفلاتر</button>
+                          )}
                         </div>
-                        <p className="font-cairo font-semibold text-[14px] text-neutral-500">
-                          {hasFilters ? 'لا توجد نتائج مطابقة' : 'لا يوجد مستخدمون'}
-                        </p>
-                        {hasFilters && (
+                      </td>
+                    </tr>
+                  ) : users.map(u => (
+                    <tr
+                      key={u.id}
+                      className="hover:bg-neutral-50/60 transition-colors group cursor-pointer"
+                      onClick={() => setViewUser(u)}
+                    >
+                      {/* Name + Avatar */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <AvatarCircle letter={u.avatar} role={u.role} size="sm" />
+                          <span className="font-cairo font-semibold text-[13px] text-neutral-900 whitespace-nowrap">{u.name}</span>
+                        </div>
+                      </td>
+
+                      {/* Email */}
+                      <td className="px-5 py-3.5">
+                        <span className="font-cairo text-[12px] text-neutral-500" dir="ltr">{u.email}</span>
+                      </td>
+
+                      {/* Role */}
+                      <td className="px-5 py-3.5">
+                        <RoleBadge role={u.role} />
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-5 py-3.5">
+                        <StatusBadge status={u.status} />
+                      </td>
+
+                      {/* Last Login */}
+                      <td className="px-5 py-3.5">
+                        <span className="font-cairo text-[12px] text-neutral-500 whitespace-nowrap">
+                          {u.lastLogin ? fmtDateTime(u.lastLogin) : '—'}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
                           <button
-                            onClick={() => { setSearch(''); setFilterRole('all'); setFilterStatus('all') }}
-                            className="font-cairo text-[12px] text-primary-500 hover:underline"
-                          >مسح الفلاتر</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ) : pag.slice.map(u => (
-                  <tr
-                    key={u.id}
-                    className="hover:bg-neutral-50/60 transition-colors group cursor-pointer"
-                    onClick={() => setViewUser(u)}
-                  >
-                    {/* Name + Avatar */}
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <AvatarCircle letter={u.avatar} role={u.role} size="sm" />
-                        <span className="font-cairo font-semibold text-[13px] text-neutral-900 whitespace-nowrap">{u.name}</span>
-                      </div>
-                    </td>
-
-                    {/* Email */}
-                    <td className="px-5 py-3.5">
-                      <span className="font-cairo text-[12px] text-neutral-500" dir="ltr">{u.email}</span>
-                    </td>
-
-                    {/* Role */}
-                    <td className="px-5 py-3.5">
-                      <RoleBadge role={u.role} />
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-5 py-3.5">
-                      <StatusBadge status={u.status} />
-                    </td>
-
-                    {/* Last Login */}
-                    <td className="px-5 py-3.5">
-                      <span className="font-cairo text-[12px] text-neutral-500 whitespace-nowrap">
-                        {u.lastLogin ? fmtDateTime(u.lastLogin) : '—'}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                        <button
-                          onClick={() => setViewUser(u)}
-                          className="w-7 h-7 flex items-center justify-center rounded-[7px] text-neutral-400 hover:text-info-600 hover:bg-info-50 transition-colors"
-                          title="عرض"
-                        ><Eye size={13} /></button>
-                        <button
-                          onClick={() => openEdit(u)}
-                          className="w-7 h-7 flex items-center justify-center rounded-[7px] text-neutral-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
-                          title="تعديل"
-                        ><Edit2 size={13} /></button>
-                        <button
-                          onClick={() => setDeleteTarget(u)}
-                          className="w-7 h-7 flex items-center justify-center rounded-[7px] text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                          title="حذف"
-                        ><Trash2 size={13} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                            onClick={() => setViewUser(u)}
+                            className="w-7 h-7 flex items-center justify-center rounded-[7px] text-neutral-400 hover:text-info-600 hover:bg-info-50 transition-colors"
+                            title="عرض"
+                          ><Eye size={13} /></button>
+                          <button
+                            onClick={() => openEdit(u)}
+                            className="w-7 h-7 flex items-center justify-center rounded-[7px] text-neutral-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                            title="تعديل"
+                          ><Edit2 size={13} /></button>
+                          <button
+                            onClick={() => setDeleteTarget(u)}
+                            className="w-7 h-7 flex items-center justify-center rounded-[7px] text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title="حذف"
+                          ><Trash2 size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Pagination */}
-          {filtered.length > 0 && (
+          {totalCount > 0 && (
             <Pagination
-              page={pag.page} totalPages={pag.totalPages} pageSize={pag.pageSize}
-              from={pag.from} to={pag.to} total={pag.total}
-              onPage={pag.setPage} onPageSize={pag.setPageSize}
-              onFirst={pag.goFirst} onPrev={pag.goPrev} onNext={pag.goNext} onLast={pag.goLast}
+              page={page} totalPages={totalPages} pageSize={pageSize}
+              from={from} to={to} total={totalCount}
+              onPage={setPage} onPageSize={handlePageSizeChange}
+              onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
             />
           )}
         </div>

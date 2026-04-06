@@ -1,13 +1,19 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   Search, Plus, Filter, ChevronDown, ChevronLeft, ChevronRight, Edit2, Trash2, Eye,
   Calendar, Info, Scale, Target, PlayCircle, Truck, ScanLine, Type, Camera,
-  X, Check, CalendarDays,
+  X, Check, CalendarDays, Loader2,
 } from 'lucide-react'
 import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
+import {
+  livestockBatchesApi, livestockHeadsApi,
+  type LivestockBatchItem, type LivestockHeadItem,
+  type CreateBatchRequest, type UpdateBatchRequest,
+  type CreateHeadRequest, type CreateHeadsBulkRequest, type UpdateHeadRequest,
+} from '../services/api'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Types & Mock Data
+// Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 type CattleType = 'dairy' | 'fattening'
@@ -15,42 +21,29 @@ type BatchStatus = 'active' | 'closed'
 type CattleStatus = 'active' | 'sold' | 'dead' | 'quarantine'
 
 interface Batch {
-  id: string
+  id: number
   name: string
   type: CattleType
   startDate: string
   endDate?: string
   status: BatchStatus
   targetWeight?: number
-  notes?: string
+  numberOfHeads?: number
 }
 
 interface Cattle {
-  id: string
-  batchId: string
-  tag: string | null
+  id: number
+  batchId: number
+  tag?: string
   type: CattleType
-  breed: string | null
+  breed?: string
   entryDate: string
-  avgWeight: number
-  vehicleNumber: string | null
-  weighbridgePhoto: string | null
+  avgWeight?: number
+  vehicleNumber?: string
+  weighbridgePhoto?: string
   status: CattleStatus
-  notes?: string
+  batchName?: string
 }
-
-const INIT_BATCHES: Batch[] = [
-  { id: 'b1', name: 'دورة تسمين هولشتاين - 2026/01', type: 'fattening', startDate: '2026-01-10', status: 'active', targetWeight: 450, notes: 'دفعة استثمارية للتسمين' },
-  { id: 'b2', name: 'دورة حلاب مبدئية', type: 'dairy', startDate: '2025-06-01', status: 'active', notes: 'رؤوس منتجة للحليب' },
-  { id: 'b3', name: 'تسمين عجول 2025', type: 'fattening', startDate: '2025-02-15', endDate: '2025-10-20', status: 'closed', targetWeight: 500 },
-]
-
-const INIT_CATTLE: Cattle[] = [
-  { id: 'c1', batchId: 'b1', tag: 'TAG-1001', type: 'fattening', breed: 'هولشتاين', entryDate: '2026-01-12', avgWeight: 180, vehicleNumber: 'أ ل ج 1234', weighbridgePhoto: 'card_1.jpg', status: 'active' },
-  { id: 'c2', batchId: 'b1', tag: 'TAG-1002', type: 'fattening', breed: 'هولشتاين', entryDate: '2026-01-12', avgWeight: 185, vehicleNumber: 'أ ل ج 1234', weighbridgePhoto: null, status: 'active' },
-  { id: 'c3', batchId: 'b2', tag: 'TAG-2050', type: 'dairy', breed: 'سيمنتال', entryDate: '2025-06-05', avgWeight: 420, vehicleNumber: 'ط س ع 987', weighbridgePhoto: 'card_7.jpg', status: 'active' },
-  { id: 'c4', batchId: 'b1', tag: null, type: 'fattening', breed: 'بلدي', entryDate: '2026-01-15', avgWeight: 160, vehicleNumber: null, weighbridgePhoto: null, status: 'quarantine' },
-]
 
 const TYPE_CFG: Record<CattleType, { label: string; color: string; bg: string }> = {
   dairy: { label: 'حلاب', color: 'text-info-700', bg: 'bg-info-50' },
@@ -167,11 +160,13 @@ interface HeadFormState {
   tag: string
   vehicleNumber: string
   weighbridgePhoto: File | null
+  entryDate: string
 }
 
 function emptyHeadForm(): HeadFormState {
   return {
-    batchId: '', type: '', count: '1', avgWeight: '', breed: '', tag: '', vehicleNumber: '', weighbridgePhoto: null
+    batchId: '', type: '', count: '1', avgWeight: '', breed: '', tag: '', vehicleNumber: '', weighbridgePhoto: null,
+    entryDate: new Date().toISOString().split('T')[0]
   }
 }
 
@@ -183,16 +178,16 @@ function HeadsTab({ cattle, batches, onAdd, onEdit, onDelete }: {
   cattle: Cattle[]
   batches: Batch[]
   onAdd: (h: HeadFormState) => void
-  onEdit: (id: string, h: HeadFormState) => void
-  onDelete: (id: string) => void
+  onEdit: (id: number, h: HeadFormState) => void
+  onDelete: (id: number) => void
 }) {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<CattleType | 'all'>('all')
-  const [batchFilter, setBatchFilter] = useState<string>('all')
+  const [batchFilter, setBatchFilter] = useState<string | number>('all')
 
-  const [showAdd,      setShowAdd]      = useState(false)
-  const [viewCattle,   setViewCattle]   = useState<Cattle | null>(null)
-  const [editCattle,   setEditCattle]   = useState<Cattle | null>(null)
+  const [showAdd, setShowAdd] = useState(false)
+  const [viewCattle, setViewCattle] = useState<Cattle | null>(null)
+  const [editCattle, setEditCattle] = useState<Cattle | null>(null)
   const [deleteCattle, setDeleteCattle] = useState<Cattle | null>(null)
 
   const [page, setPage] = useState(1)
@@ -201,7 +196,7 @@ function HeadsTab({ cattle, batches, onAdd, onEdit, onDelete }: {
     return cattle.filter(c => {
       const ms = !search || c.tag?.toLowerCase().includes(search.toLowerCase()) || c.breed?.toLowerCase().includes(search.toLowerCase())
       const mt = typeFilter === 'all' || c.type === typeFilter
-      const mb = batchFilter === 'all' || c.batchId === batchFilter
+      const mb = batchFilter === 'all' || c.batchId === Number(batchFilter)
       return ms && mt && mb
     })
   }, [cattle, search, typeFilter, batchFilter])
@@ -237,7 +232,7 @@ function HeadsTab({ cattle, batches, onAdd, onEdit, onDelete }: {
             className="h-9 ps-8 pe-8 rounded-[10px] border border-neutral-200 bg-white font-cairo font-semibold text-[12px] text-neutral-700 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/30 cursor-pointer appearance-none max-w-[200px] truncate">
             <option value="all">كل الدورات</option>
             {batches.map(b => (
-              <option key={b.id} value={b.id}>{b.name}</option>
+              <option key={b.id} value={String(b.id)}>{b.name}</option>
             ))}
           </select>
           <ChevronDown size={12} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
@@ -321,9 +316,10 @@ function HeadsTab({ cattle, batches, onAdd, onEdit, onDelete }: {
       )}
       {editCattle && (
         <HeadFormModal batches={batches} initial={{
-          batchId: editCattle.batchId, type: editCattle.type, count: '1',
-          avgWeight: String(editCattle.avgWeight), breed: editCattle.breed || '',
-          tag: editCattle.tag || '', vehicleNumber: editCattle.vehicleNumber || '', weighbridgePhoto: null
+          batchId: String(editCattle.batchId), type: editCattle.type, count: '1',
+          avgWeight: String(editCattle.avgWeight || ''), breed: editCattle.breed || '',
+          tag: editCattle.tag || '', vehicleNumber: editCattle.vehicleNumber || '', weighbridgePhoto: null,
+          entryDate: editCattle.entryDate
         }} isEdit={true}
           onSave={d => { onEdit(editCattle.id, d); setEditCattle(null) }}
           onClose={() => setEditCattle(null)} />
@@ -385,8 +381,8 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
               <select value={form.batchId} onChange={e => { setForm({ ...form, batchId: e.target.value }); delete errors.batchId; }}
                 className={`${inp} ${errors.batchId ? 'border-error-400 focus:ring-error-400/20' : ''}`}>
                 <option value="">-- اختر الدورة --</option>
-                {batches.filter(b => b.status === 'active' || b.id === form.batchId).map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                {batches.filter(b => b.status === 'active' || Number(form.batchId) === b.id).map(b => (
+                  <option key={b.id} value={String(b.id)}>{b.name}</option>
                 ))}
               </select>
               {errors.batchId && <p className="text-error-500 text-[11px] mt-1 pr-1">{errors.batchId}</p>}
@@ -423,6 +419,15 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
                   className={`${inp} pe-10 ${errors.avgWeight ? 'border-error-400 focus:ring-error-400/20' : ''}`} placeholder="مثال: 150" />
               </div>
               {errors.avgWeight && <p className="text-error-500 text-[11px] mt-1 pr-1">{errors.avgWeight}</p>}
+            </div>
+
+            <div>
+              <label className={lbl}>تاريخ الدخول <span className="text-error-500">*</span></label>
+              <div className="relative">
+                <Calendar size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input type="date" value={form.entryDate} onChange={e => setForm({ ...form, entryDate: e.target.value })}
+                  className={`${inp} pe-10`} dir="ltr" />
+              </div>
             </div>
 
             <div className="h-px bg-neutral-100 my-2" />
@@ -469,7 +474,7 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
 
           </div>
         </div>
-        
+
         <div className="shrink-0 px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex items-center justify-end gap-3 rounded-b-[20px]">
           <button onClick={onClose}
             className="px-6 h-10 font-cairo font-semibold text-[13px] text-neutral-600 bg-white border border-neutral-200 rounded-[12px] hover:bg-neutral-50 transition-colors">
@@ -548,9 +553,9 @@ function HeadViewDrawer({ cattle, batches, onClose, onEdit }: {
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <Row icon={CalendarDays} label="تاريخ الدخول" value={cattle.entryDate} ltr />
-          <Row icon={Target}       label="الدورة المرتبطة" value={b?.name || '—'} />
-          <Row icon={Type}         label="السلالة" value={cattle.breed || '—'} />
-          <Row icon={Truck}        label="رقم السيارة" value={cattle.vehicleNumber || '—'} />
+          <Row icon={Target} label="الدورة المرتبطة" value={b?.name || '—'} />
+          <Row icon={Type} label="السلالة" value={cattle.breed || '—'} />
+          <Row icon={Truck} label="رقم السيارة" value={cattle.vehicleNumber || '—'} />
         </div>
       </div>
     </div>
@@ -590,15 +595,15 @@ function BatchFormModal({
   const [form, setForm] = useState<BatchFormState>(initial)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const inp    = 'w-full h-9 px-3 rounded-[10px] border border-neutral-200 bg-white text-[13px] font-cairo text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all placeholder:text-neutral-400'
+  const inp = 'w-full h-9 px-3 rounded-[10px] border border-neutral-200 bg-white text-[13px] font-cairo text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all placeholder:text-neutral-400'
   const inpErr = 'border-red-300 focus:border-red-500 focus:ring-red-500/20'
-  const lbl    = 'block text-[11px] font-semibold text-neutral-500 mb-1 uppercase tracking-wide'
+  const lbl = 'block text-[11px] font-semibold text-neutral-500 mb-1 uppercase tracking-wide'
 
   function save() {
     const errs: Record<string, string> = {}
-    if (!form.name.trim())  errs.name      = 'اسم الدورة مطلوب'
-    if (!form.type)         errs.type      = 'نوع الدورة مطلوب'
-    if (!form.startDate)    errs.startDate = 'تاريخ البدء مطلوب'
+    if (!form.name.trim()) errs.name = 'اسم الدورة مطلوب'
+    if (!form.type) errs.type = 'نوع الدورة مطلوب'
+    if (!form.startDate) errs.startDate = 'تاريخ البدء مطلوب'
     if (form.endDate && form.endDate < form.startDate) errs.endDate = 'تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء'
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
     onSave({
@@ -791,9 +796,9 @@ function BatchViewDrawer({ batch, cattleCount, onClose, onEdit }: {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          <Row icon={CalendarDays} label="تاريخ البدء"     value={batch.startDate} ltr />
-          <Row icon={CalendarDays} label="تاريخ الانتهاء"  value={batch.endDate ?? 'لم يُحدَّد بعد'} ltr />
-          <Row icon={Target}       label="الوزن المستهدف"  value={batch.targetWeight ? `${batch.targetWeight} كجم` : '—'} />
+          <Row icon={CalendarDays} label="تاريخ البدء" value={batch.startDate} ltr />
+          <Row icon={CalendarDays} label="تاريخ الانتهاء" value={batch.endDate ?? 'لم يُحدَّد بعد'} ltr />
+          <Row icon={Target} label="الوزن المستهدف" value={batch.targetWeight ? `${batch.targetWeight} كجم` : '—'} />
           {batch.notes && (
             <div className="mt-4 bg-neutral-50 rounded-[10px] px-4 py-3">
               <p className="font-cairo text-[10px] text-neutral-400 mb-1">ملاحظات</p>
@@ -812,17 +817,17 @@ function BatchesTab({ batches, cattle, onAdd, onEdit, onDelete }: {
   batches: Batch[]
   cattle: Cattle[]
   onAdd: (b: Omit<Batch, 'id'>) => void
-  onEdit: (id: string, b: Omit<Batch, 'id'>) => void
-  onDelete: (id: string) => void
+  onEdit: (id: number, b: Omit<Batch, 'id'>) => void
+  onDelete: (id: number) => void
 }) {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<CattleType | 'all'>('all')
   const [page, setPage] = useState(1)
 
-  const [showAdd,      setShowAdd]      = useState(false)
-  const [viewBatch,    setViewBatch]    = useState<Batch | null>(null)
-  const [editBatch,    setEditBatch]    = useState<Batch | null>(null)
-  const [deleteBatch,  setDeleteBatch]  = useState<Batch | null>(null)
+  const [showAdd, setShowAdd] = useState(false)
+  const [viewBatch, setViewBatch] = useState<Batch | null>(null)
+  const [editBatch, setEditBatch] = useState<Batch | null>(null)
+  const [deleteBatch, setDeleteBatch] = useState<Batch | null>(null)
 
   const filtered = useMemo(() => batches.filter(b => {
     const ms = !search || b.name.includes(search)
@@ -835,7 +840,7 @@ function BatchesTab({ batches, cattle, onAdd, onEdit, onDelete }: {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  function batchToCattleCount(id: string) {
+  function batchToCattleCount(id: number) {
     return cattle.filter(c => c.batchId === id).length
   }
 
@@ -985,50 +990,201 @@ function BatchesTab({ batches, cattle, onAdd, onEdit, onDelete }: {
 
 export default function CattlePage() {
   const [activeTab, setActiveTab] = useState<'heads' | 'batches'>('heads')
-  const [cattle, setCattle] = useState<Cattle[]>(INIT_CATTLE)
-  const [batches, setBatches] = useState<Batch[]>(INIT_BATCHES)
+  const [cattle, setCattle] = useState<Cattle[]>([])
+  const [batches, setBatches] = useState<Batch[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>('')
+
+  // Load data on mount
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  async function loadData() {
+    try {
+      setLoading(true)
+      setError('')
+      const [batchesRes, cattleRes] = await Promise.all([
+        livestockBatchesApi.getList(1, 1000),
+        livestockHeadsApi.getList(1, 1000),
+      ])
+
+      console.log('Batches response:', batchesRes)
+      console.log('Cattle response:', cattleRes)
+
+      if (batchesRes.data?.data) {
+        const mappedBatches = batchesRes.data.data.map((b: LivestockBatchItem) => {
+          console.log('Mapping batch:', b)
+          const typeStr = (b.batchType || '').toLowerCase()
+          return {
+            id: b.id,
+            name: b.name,
+            type: (typeStr.includes('dairy') ? 'dairy' : 'fattening') as CattleType,
+            startDate: b.startDate,
+            endDate: b.endDate,
+            status: (b.status || '').toLowerCase().includes('closed') ? 'closed' : 'active' as BatchStatus,
+            targetWeight: b.targetWeight,
+            numberOfHeads: b.numberOfHeads,
+          }
+        })
+        setBatches(mappedBatches)
+      }
+
+      if (cattleRes.data?.data) {
+        const mappedCattle = cattleRes.data.data.map((c: LivestockHeadItem) => {
+          console.log('Mapping cattle:', c)
+          const typeStr = (c.headType || '').toLowerCase()
+          const statusStr = (c.status || '').toLowerCase()
+          let status: CattleStatus = 'active'
+          if (statusStr.includes('sold')) status = 'sold'
+          else if (statusStr.includes('dead')) status = 'dead'
+          else if (statusStr.includes('quarantine')) status = 'quarantine'
+
+          return {
+            id: c.id,
+            batchId: c.livestockBatchId,
+            tag: c.tag,
+            type: (typeStr.includes('dairy') ? 'dairy' : 'fattening') as CattleType,
+            breed: c.breed,
+            entryDate: c.entryDate,
+            avgWeight: c.averageWeight,
+            vehicleNumber: c.vehicleNumber,
+            weighbridgePhoto: c.weighbridgePhotoUrl,
+            status: status,
+            batchName: c.batchName,
+          }
+        })
+        setCattle(mappedCattle)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'فشل تحميل البيانات'
+      setError(msg)
+      console.error('Error loading cattle data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Batches
-  function handleAddBatch(data: Omit<Batch, 'id'>) {
-    const newBatch: Batch = { ...data, id: `b${Date.now()}` }
-    setBatches(prev => [newBatch, ...prev])
+  async function handleAddBatch(data: Omit<Batch, 'id'>) {
+    try {
+      const req: CreateBatchRequest = {
+        name: data.name,
+        batchType: data.type,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        targetWeight: data.targetWeight,
+        status: data.status === 'active' ? 'Active' : 'Closed',
+      }
+      await livestockBatchesApi.create(req)
+      await loadData()
+    } catch (err) {
+      console.error('Error adding batch:', err)
+      setError('فشل إضافة الدورة')
+    }
   }
-  function handleEditBatch(id: string, data: Omit<Batch, 'id'>) {
-    setBatches(prev => prev.map(b => b.id === id ? { ...b, ...data } : b))
+
+  async function handleEditBatch(id: string | number, data: Omit<Batch, 'id'>) {
+    try {
+      const req: UpdateBatchRequest = {
+        id: Number(id),
+        name: data.name,
+        batchType: data.type,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        targetWeight: data.targetWeight,
+        status: data.status === 'active' ? 'Active' : 'Closed',
+      }
+      await livestockBatchesApi.update(Number(id), req)
+      await loadData()
+    } catch (err) {
+      console.error('Error editing batch:', err)
+      setError('فشل تعديل الدورة')
+    }
   }
-  function handleDeleteBatch(id: string) {
-    setBatches(prev => prev.filter(b => b.id !== id))
+
+  async function handleDeleteBatch(id: string | number) {
+    try {
+      await livestockBatchesApi.delete(Number(id))
+      await loadData()
+    } catch (err) {
+      console.error('Error deleting batch:', err)
+      setError('فشل حذف الدورة')
+    }
   }
 
   // Heads
-  function handleAddHeads(form: HeadFormState) {
-    // Generate mock ID
-    const count = parseInt(form.count) || 1
-    const newItems: Cattle[] = Array.from({ length: count }).map((_, i) => ({
-      id: `c${Date.now()}-${i}`,
-      batchId: form.batchId,
-      type: form.type as CattleType,
-      avgWeight: parseFloat(form.avgWeight),
-      breed: form.breed || null,
-      tag: form.tag ? (count > 1 ? `${form.tag}-${i+1}` : form.tag) : null,
-      vehicleNumber: form.vehicleNumber || null,
-      weighbridgePhoto: form.weighbridgePhoto?.name || null,
-      entryDate: new Date().toISOString().split('T')[0],
-      status: 'active',
-    }))
-    setCattle(prev => [...newItems, ...prev])
+  async function handleAddHeads(form: HeadFormState) {
+    try {
+      const count = parseInt(form.count) || 1
+
+      if (count > 1) {
+        // Use bulk API
+        const req: CreateHeadsBulkRequest = {
+          livestockBatchId: Number(form.batchId),
+          count: count,
+          headType: form.type,
+          breed: form.breed || undefined,
+          averageWeight: form.avgWeight ? parseFloat(form.avgWeight) : undefined,
+          entryDate: form.entryDate,
+          status: 'Active',
+          vehicleNumber: form.vehicleNumber || undefined,
+          weighbridgePhotoUrl: form.weighbridgePhoto?.name || undefined,
+        }
+        await livestockHeadsApi.createBulk(req)
+      } else {
+        // Use single create API
+        const req: CreateHeadRequest = {
+          livestockBatchId: Number(form.batchId),
+          headType: form.type,
+          tag: form.tag || undefined,
+          breed: form.breed || undefined,
+          averageWeight: form.avgWeight ? parseFloat(form.avgWeight) : undefined,
+          entryDate: form.entryDate,
+          status: 'Active',
+          vehicleNumber: form.vehicleNumber || undefined,
+          weighbridgePhotoUrl: form.weighbridgePhoto?.name || undefined,
+        }
+        await livestockHeadsApi.create(req)
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error('Error adding heads:', err)
+      setError('فشل إضافة الرؤوس')
+    }
   }
 
-  function handleEditHead(id: string, data: HeadFormState) {
-    setCattle(prev => prev.map(c => c.id === id ? {
-      ...c, batchId: data.batchId, type: data.type as CattleType,
-      avgWeight: parseFloat(data.avgWeight), breed: data.breed || null,
-      tag: data.tag || null, vehicleNumber: data.vehicleNumber || null,
-    } : c))
+  async function handleEditHead(id: string | number, data: HeadFormState) {
+    try {
+      const req: UpdateHeadRequest = {
+        id: Number(id),
+        livestockBatchId: Number(data.batchId),
+        headType: data.type,
+        tag: data.tag || undefined,
+        breed: data.breed || undefined,
+        averageWeight: data.avgWeight ? parseFloat(data.avgWeight) : undefined,
+        entryDate: data.entryDate,
+        status: 'Active',
+        vehicleNumber: data.vehicleNumber || undefined,
+        weighbridgePhotoUrl: data.weighbridgePhoto?.name || undefined,
+      }
+      await livestockHeadsApi.update(Number(id), req)
+      await loadData()
+    } catch (err) {
+      console.error('Error editing head:', err)
+      setError('فشل تعديل الرأس')
+    }
   }
 
-  function handleDeleteHead(id: string) {
-    setCattle(prev => prev.filter(c => c.id !== id))
+  async function handleDeleteHead(id: string | number) {
+    try {
+      await livestockHeadsApi.delete(Number(id))
+      await loadData()
+    } catch (err) {
+      console.error('Error deleting head:', err)
+      setError('فشل حذف الرأس')
+    }
   }
 
   return (
@@ -1041,19 +1197,41 @@ export default function CattlePage() {
           <p className="font-cairo text-[14px] text-neutral-500 leading-tight">إدارة السجلات، الدورات المفتوحة والمغلقة، والأوزان الخاصة بالمواشي.</p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 border-b border-neutral-200">
-          <button onClick={() => setActiveTab('heads')} className={`px-5 py-3 font-cairo font-bold text-[14px] leading-tight transition-all border-b-[3px] ${activeTab === 'heads' ? 'text-primary-600 border-primary-600' : 'text-neutral-500 border-transparent hover:text-neutral-700 hover:border-neutral-300'}`}>
-            سجل الرؤوس
-          </button>
-          <button onClick={() => setActiveTab('batches')} className={`px-5 py-3 font-cairo font-bold text-[14px] leading-tight transition-all border-b-[3px] ${activeTab === 'batches' ? 'text-primary-600 border-primary-600' : 'text-neutral-500 border-transparent hover:text-neutral-700 hover:border-neutral-300'}`}>
-            الدورات
-          </button>
-        </div>
+        {/* Error Alert */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-[12px] px-4 py-3 flex items-center gap-3">
+            <div className="text-red-600 text-[14px] font-cairo">{error}</div>
+            <button onClick={() => setError('')} className="ms-auto text-red-500 hover:text-red-700">
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
-        {/* Tab Content */}
-        {activeTab === 'heads' && <HeadsTab cattle={cattle} batches={batches} onAdd={handleAddHeads} />}
-        {activeTab === 'batches' && <BatchesTab batches={batches} cattle={cattle} onAdd={handleAddBatch} onEdit={handleEditBatch} onDelete={handleDeleteBatch} />}
+        {/* Loading State */}
+        {loading && (
+          <div className="bg-white border border-neutral-200 rounded-[12px] px-4 py-4 flex items-center gap-3">
+            <Loader2 size={18} className="text-primary-500 animate-spin" />
+            <span className="font-cairo text-[14px] text-neutral-600">جاري تحميل البيانات...</span>
+          </div>
+        )}
+
+        {/* Tabs */}
+        {!loading && (
+          <>
+            <div className="flex items-center gap-1 border-b border-neutral-200">
+              <button onClick={() => setActiveTab('heads')} className={`px-5 py-3 font-cairo font-bold text-[14px] leading-tight transition-all border-b-[3px] ${activeTab === 'heads' ? 'text-primary-600 border-primary-600' : 'text-neutral-500 border-transparent hover:text-neutral-700 hover:border-neutral-300'}`}>
+                سجل الرؤوس
+              </button>
+              <button onClick={() => setActiveTab('batches')} className={`px-5 py-3 font-cairo font-bold text-[14px] leading-tight transition-all border-b-[3px] ${activeTab === 'batches' ? 'text-primary-600 border-primary-600' : 'text-neutral-500 border-transparent hover:text-neutral-700 hover:border-neutral-300'}`}>
+                الدورات
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'heads' && <HeadsTab cattle={cattle} batches={batches} onAdd={handleAddHeads} onEdit={handleEditHead} onDelete={handleDeleteHead} />}
+            {activeTab === 'batches' && <BatchesTab batches={batches} cattle={cattle} onAdd={handleAddBatch} onEdit={handleEditBatch} onDelete={handleDeleteBatch} />}
+          </>
+        )}
 
       </div>
     </div>

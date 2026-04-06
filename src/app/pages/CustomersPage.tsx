@@ -1,12 +1,19 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 import {
   Plus, Search, X, Edit2, Trash2, Eye,
   ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft,
   Phone, Mail, MapPin, Building2, User,
   Users, UserCheck, UserX, TrendingUp,
-  CalendarDays, ShoppingBag, Filter, Wallet,
+  CalendarDays, ShoppingBag, Filter, Loader2,
 } from 'lucide-react'
+import {
+  customersApi,
+  type CustomerListItem,
+  type CustomerDetails,
+  type CreateCustomerRequest,
+  type UpdateCustomerRequest,
+} from '../services/api'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -16,41 +23,21 @@ type CustomerStatus = 'active' | 'inactive'
 type CustomerType = 'individual' | 'company' | 'slaughterhouse' | 'distributor'
 
 interface Customer {
-  id: string
+  id: number
   name: string
   company: string
   phone: string
   email: string
   address: string
   type: CustomerType
-  balance: number         // positive = they owe us, negative = we owe them (credit)
+  balance: number
   status: CustomerStatus
   notes: string
   registeredAt: string
   lastOrderDate?: string
+  taxNumber?: string
+  creditLimit?: number
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock Data
-// ─────────────────────────────────────────────────────────────────────────────
-
-const INIT_CUSTOMERS: Customer[] = [
-  { id:'c1',  name:'محمود سعيد عبده',         company:'مسلخ القاهرة الكبير',              phone:'01001234567', email:'mahmoud@cairo-slaught.com',    address:'القاهرة، الشرابية، المنطقة الصناعية الثانية',     type:'slaughterhouse', balance:142500, status:'active',   notes:'عميل منتظم، يشتري بالجملة كل أسبوعين',               registeredAt:'2021-05-12', lastOrderDate:'2026-03-18' },
-  { id:'c2',  name:'كريم عاطف مرسي',          company:'شركة النيل للتوزيع الغذائي',       phone:'01507654321', email:'karim@nile-dist.com',           address:'الجيزة، الدقي، شارع التحرير',                     type:'distributor',    balance:76000,  status:'active',   notes:'موزع رئيسي في منطقة القاهرة الكبرى',                 registeredAt:'2021-08-20', lastOrderDate:'2026-03-10' },
-  { id:'c3',  name:'أحمد حسن رزق',            company:'',                                 phone:'01209876543', email:'ahmed.r@gmail.com',            address:'القاهرة، عين شمس، شارع العباسية',                 type:'individual',     balance:24000,  status:'active',   notes:'يشتري عجول للمناسبات والمواسم',                       registeredAt:'2022-01-10', lastOrderDate:'2026-01-25' },
-  { id:'c4',  name:'طارق محمود فتحي',         company:'مطاعم الفتحي',                     phone:'01012468135', email:'tarek@fathi-rest.com',          address:'القاهرة، المهندسين، شارع المساحة',                type:'company',        balance:46500,  status:'active',   notes:'سلسلة مطاعم، تحتاج توريد منتظم',                     registeredAt:'2022-03-15', lastOrderDate:'2026-02-28' },
-  { id:'c5',  name:'عبدالرحمن سيد برعي',      company:'مسلخ الجيزة الجديد',               phone:'01551357924', email:'abdo@giza-slaught.com',         address:'الجيزة، المنطقة الصناعية، الطريق الدائري',        type:'slaughterhouse', balance:0,      status:'inactive', notes:'توقف التعامل بسبب خلاف في السعر',                     registeredAt:'2022-06-01', lastOrderDate:'2025-09-30' },
-  { id:'c6',  name:'منى سعد حجاب',            company:'',                                 phone:'01008642097', email:'mona.h@hotmail.com',            address:'القاهرة، مدينة نصر، حي الأندلس',                  type:'individual',     balance:10500,  status:'active',   notes:'',                                                    registeredAt:'2022-09-20', lastOrderDate:'2026-03-05' },
-  { id:'c7',  name:'ياسر إبراهيم مسعود',      company:'شركة الدلتا للتوزيع',              phone:'01203216549', email:'yasser@delta-co.com',           address:'المنصورة، حي الجامعة، شارع الجمهورية',            type:'distributor',    balance:158500, status:'active',   notes:'موزع موسمي، حجم أعلى في المواسم والأعياد',            registeredAt:'2022-11-05', lastOrderDate:'2026-03-20' },
-  { id:'c8',  name:'نبيل حمدي الشيخ',         company:'مطعم الشيخ للمشويات',              phone:'01006549873', email:'nabil@sheikh-grill.com',        address:'القاهرة، الزيتون، شارع كلوت بك',                  type:'company',        balance:32000,  status:'active',   notes:'',                                                    registeredAt:'2023-01-18', lastOrderDate:'2026-02-14' },
-  { id:'c9',  name:'هناء محمد سلامة',         company:'',                                 phone:'01024561237', email:'hanaa.s@yahoo.com',             address:'الإسكندرية، سيدي بشر، شارع الكورنيش',            type:'individual',     balance:-7500,  status:'active',   notes:'رصيد سالب = دفع مقدم على طلب قادم',                  registeredAt:'2023-04-22', lastOrderDate:'2026-03-12' },
-  { id:'c10', name:'سامي علي درويش',          company:'شركة الصعيد للتجارة',              phone:'01507891234', email:'sami@saeed-trade.com',          address:'أسيوط، حي الجامعة، شارع الجمهورية',               type:'company',        balance:94500,  status:'active',   notes:'تشتري عجول التسمين للتصدير',                          registeredAt:'2023-06-10', lastOrderDate:'2026-01-30' },
-  { id:'c11', name:'محمد عاطف نصر',           company:'مسلخ الشرقية المركزي',             phone:'01006667788', email:'med@sharqia-slaught.com',       address:'الزقازيق، حي الجامعة، طريق الإسماعيلية',         type:'slaughterhouse', balance:112000, status:'active',   notes:'أكبر عميل من منطقة الدلتا',                          registeredAt:'2023-08-01', lastOrderDate:'2026-03-22' },
-  { id:'c12', name:'إيمان فريد طه',           company:'',                                 phone:'01209990011', email:'eman.t@gmail.com',              address:'الجيزة، المهندسين، شارع سوريا',                   type:'individual',     balance:16000,  status:'inactive', notes:'لم يتم التواصل منذ أكثر من 6 أشهر',                   registeredAt:'2023-09-15', lastOrderDate:'2025-08-20' },
-  { id:'c13', name:'وائل حسن القاضي',         company:'سلسلة مطاعم القاضي',               phone:'01012223344', email:'wael@qadi-rest.com',            address:'القاهرة، المعادي، طريق الكورنيش',                 type:'company',        balance:58000,  status:'active',   notes:'يطلب أسبوعياً ويفضل الاستلام الذاتي',                registeredAt:'2023-11-02', lastOrderDate:'2026-03-17' },
-  { id:'c14', name:'شيرين خالد حجازي',        company:'شركة حجازي للتوزيع الإقليمي',      phone:'01005556677', email:'shirin@hegazy-dist.com',        address:'القاهرة، الهرم، طريق الواحات الصحراوي',           type:'distributor',    balance:219000, status:'active',   notes:'أكبر موزع في منطقة القاهرة والجيزة، عقد سنوي',       registeredAt:'2024-01-08', lastOrderDate:'2026-03-19' },
-  { id:'c15', name:'علي عبدالرحمن زغلول',     company:'',                                 phone:'01008889900', email:'ali.z@outlook.com',             address:'القاهرة، مدينة نصر، حي الأندلس',                  type:'individual',     balance:9000,   status:'active',   notes:'',                                                    registeredAt:'2024-03-20', lastOrderDate:'2026-02-08' },
-]
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config
@@ -75,7 +62,46 @@ const TYPE_OPTIONS: { value: CustomerType; label: string }[] = [
   { value:'distributor',    label:'موزع'  },
 ]
 
-const PAGE_SIZE = 8
+const PAGE_SIZE = 10
+
+// Map backend category to frontend type
+function mapCategory(cat?: string): CustomerType {
+  if (!cat) return 'individual'
+  const lower = cat.toLowerCase()
+  if (lower === 'company') return 'company'
+  if (lower === 'slaughterhouse') return 'slaughterhouse'
+  if (lower === 'distributor') return 'distributor'
+  return 'individual'
+}
+
+function mapTypeToCategory(type: CustomerType): string {
+  const map: Record<CustomerType, string> = {
+    individual: 'Individual',
+    company: 'Company',
+    slaughterhouse: 'Slaughterhouse',
+    distributor: 'Distributor',
+  }
+  return map[type]
+}
+
+function mapApiToCustomer(c: CustomerListItem | CustomerDetails): Customer {
+  return {
+    id: c.id,
+    name: c.name,
+    company: c.companyName || '',
+    phone: c.phone,
+    email: c.email || '',
+    address: 'address' in c ? (c as CustomerDetails).address || '' : '',
+    type: mapCategory(c.customerCategory),
+    balance: c.balance,
+    status: (c.status?.toLowerCase() === 'active' ? 'active' : 'inactive') as CustomerStatus,
+    notes: 'notes' in c ? (c as any).notes || '' : '',
+    registeredAt: c.registeredAt ? new Date(c.registeredAt).toISOString().split('T')[0] : '',
+    lastOrderDate: c.lastOrderDate ? new Date(c.lastOrderDate).toISOString().split('T')[0] : undefined,
+    taxNumber: 'taxNumber' in c ? (c as CustomerDetails).taxNumber || undefined : undefined,
+    creditLimit: 'creditLimit' in c ? (c as CustomerDetails).creditLimit || undefined : undefined,
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -90,8 +116,6 @@ function fmtDate(d?: string) {
   return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-function genId() { return `c${Date.now()}` }
-
 function emptyForm(): Omit<Customer, 'id'> {
   return {
     name: '', company: '', phone: '', email: '', address: '',
@@ -105,15 +129,7 @@ function emptyForm(): Omit<Customer, 'id'> {
 // Pagination
 // ─────────────────────────────────────────────────────────────────────────────
 
-function usePagination<T>(items: T[], pageSize = PAGE_SIZE) {
-  const [page, setPage] = useState(1)
-  const totalPages = Math.max(1, Math.ceil(items.length / pageSize))
-  const safePage = Math.min(page, totalPages)
-  const slice = items.slice((safePage - 1) * pageSize, safePage * pageSize)
-  return { page: safePage, setPage, totalPages, slice, total: items.length }
-}
-
-function Pagination({ page, totalPages, setPage, total, pageSize }: {
+function PaginationBar({ page, totalPages, setPage, total, pageSize }: {
   page: number; totalPages: number; setPage: (p: number) => void; total: number; pageSize: number
 }) {
   const start = (page - 1) * pageSize + 1
@@ -156,8 +172,8 @@ function InfoRow({ icon: Icon, label, value, ltr }: { icon: React.ElementType; l
 }
 
 function ViewDrawer({ customer, onClose, onEdit }: { customer: Customer; onClose: () => void; onEdit: () => void }) {
-  const tp = TYPE_CFG[customer.type]
-  const st = STATUS_CFG[customer.status]
+  const tp = TYPE_CFG[customer.type] || TYPE_CFG.individual
+  const st = STATUS_CFG[customer.status] || STATUS_CFG.active
   const balancePositive = customer.balance > 0
   const balanceZero = customer.balance === 0
   const balanceColor = balancePositive ? 'text-warning-600' : customer.balance < 0 ? 'text-success-600' : 'text-neutral-600'
@@ -267,13 +283,28 @@ function CustomerModal({
 }: {
   initial: Omit<Customer, 'id'>
   isEdit: boolean
-  onSave: (data: Omit<Customer, 'id'>) => void
+  onSave: (data: Omit<Customer, 'id'>) => Promise<void>
   onClose: () => void
 }) {
   const [form, setForm] = useState<Omit<Customer, 'id'>>(initial)
-  const set = (k: keyof Omit<Customer, 'id'>, v: string | number) => setForm(f => ({ ...f, [k]: v }))
+  const [saving, setSaving] = useState(false)
+  const [apiError, setApiError] = useState('')
+  const set = (k: keyof Omit<Customer, 'id'>, v: string | number) => { setForm(f => ({ ...f, [k]: v })); setApiError('') }
 
   const valid = form.name.trim() !== '' && form.phone.trim() !== ''
+
+  async function handleSave() {
+    if (!valid) return
+    setSaving(true)
+    setApiError('')
+    try {
+      await onSave(form)
+    } catch (err: any) {
+      setApiError(err.message || 'حدث خطأ أثناء الحفظ')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
@@ -298,6 +329,12 @@ function CustomerModal({
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+          {apiError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+              <p className="font-cairo text-[12px] text-red-600">{apiError}</p>
+            </div>
+          )}
+
           {/* Name + Company */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -405,45 +442,6 @@ function CustomerModal({
             </div>
           </div>
 
-          {/* Balance */}
-          <div>
-            <label className="font-cairo text-[12px] font-semibold text-neutral-600 block mb-1.5">
-              الرصيد <span className="font-normal text-neutral-400">(موجب = مستحق على العميل، سالب = رصيد دائن)</span>
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                value={form.balance}
-                onChange={e => set('balance', parseFloat(e.target.value) || 0)}
-                dir="ltr"
-                className="w-full h-9 rounded-lg border border-neutral-200 bg-neutral-50 px-3 pe-12 font-cairo text-[13px] text-neutral-800 focus:outline-none focus:ring-2 focus:ring-success-300 focus:border-success-400 transition text-right"
-              />
-              <span className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 font-cairo text-[12px] text-neutral-400 pointer-events-none">ج.م</span>
-            </div>
-          </div>
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-cairo text-[12px] font-semibold text-neutral-600 block mb-1.5">تاريخ التسجيل</label>
-              <input
-                type="date"
-                value={form.registeredAt}
-                onChange={e => set('registeredAt', e.target.value)}
-                className="w-full h-9 rounded-lg border border-neutral-200 bg-neutral-50 px-3 font-cairo text-[13px] text-neutral-800 focus:outline-none focus:ring-2 focus:ring-success-300 focus:border-success-400 transition"
-              />
-            </div>
-            <div>
-              <label className="font-cairo text-[12px] font-semibold text-neutral-600 block mb-1.5">تاريخ آخر طلب</label>
-              <input
-                type="date"
-                value={form.lastOrderDate ?? ''}
-                onChange={e => set('lastOrderDate', e.target.value)}
-                className="w-full h-9 rounded-lg border border-neutral-200 bg-neutral-50 px-3 font-cairo text-[13px] text-neutral-800 focus:outline-none focus:ring-2 focus:ring-success-300 focus:border-success-400 transition"
-              />
-            </div>
-          </div>
-
           {/* Notes */}
           <div>
             <label className="font-cairo text-[12px] font-semibold text-neutral-600 block mb-1.5">ملاحظات</label>
@@ -466,11 +464,11 @@ function CustomerModal({
             إلغاء
           </button>
           <button
-            onClick={() => valid && onSave(form)}
-            disabled={!valid}
+            onClick={handleSave}
+            disabled={!valid || saving}
             className="flex items-center gap-2 px-5 py-2 bg-success-600 text-white rounded-lg font-cairo text-[13px] font-semibold hover:bg-success-700 disabled:opacity-40 disabled:pointer-events-none transition-colors"
           >
-            {isEdit ? <><Edit2 size={14} /> حفظ التعديلات</> : <><Plus size={14} /> إضافة العميل</>}
+            {saving ? <Loader2 size={14} className="animate-spin" /> : isEdit ? <><Edit2 size={14} /> حفظ التعديلات</> : <><Plus size={14} /> إضافة العميل</>}
           </button>
         </div>
       </div>
@@ -510,9 +508,16 @@ function StatCard({ icon: Icon, label, value, color, small }: {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>(INIT_CUSTOMERS)
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Server pagination
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
 
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterType, setFilterType] = useState<CustomerType | 'all'>('all')
   const [filterStatus, setFilterStatus] = useState<CustomerStatus | 'all'>('all')
 
@@ -521,39 +526,84 @@ export default function CustomersPage() {
   const [deleteCustomer, setDeleteCustomer] = useState<Customer | null>(null)
   const [showAdd, setShowAdd] = useState(false)
 
-  const filtered = useMemo(() => {
-    return customers.filter(c => {
-      const q = search.trim().toLowerCase()
-      const matchQ = !q || c.name.includes(q) || c.company.includes(q) || c.phone.includes(q)
-      const matchType = filterType === 'all' || c.type === filterType
-      const matchSt = filterStatus === 'all' || c.status === filterStatus
-      return matchQ && matchType && matchSt
-    })
-  }, [customers, search, filterType, filterStatus])
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1) }, 400)
+    return () => clearTimeout(t)
+  }, [search])
 
-  const { page, setPage, totalPages, slice } = usePagination(filtered)
+  const fetchCustomers = useCallback(async () => {
+    setLoading(true)
+    try {
+      const categoryParam = filterType !== 'all' ? mapTypeToCategory(filterType) : undefined
+      const statusParam = filterStatus !== 'all' ? (filterStatus === 'active' ? 'Active' : 'Inactive') : undefined
+      const result = await customersApi.getList(page, PAGE_SIZE, debouncedSearch || undefined, categoryParam, statusParam)
+      if (result.isSuccess && result.data) {
+        const mapped = (result.data.data || []).map(mapApiToCustomer)
+        setCustomers(mapped)
+        setTotalCount(result.data.totalCount || 0)
+        setTotalPages(result.data.totalPages || 1)
+      }
+    } catch (err) {
+      console.error('Failed to fetch customers:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [page, debouncedSearch, filterType, filterStatus])
+
+  useEffect(() => { fetchCustomers() }, [fetchCustomers])
 
   const totalReceivable = customers.filter(c => c.balance > 0).reduce((a, c) => a + c.balance, 0)
   const activeCount = customers.filter(c => c.status === 'active').length
   const inactiveCount = customers.filter(c => c.status === 'inactive').length
 
-  function handleAdd(data: Omit<Customer, 'id'>) {
-    setCustomers(prev => [{ ...data, id: genId() }, ...prev])
+  async function handleAdd(data: Omit<Customer, 'id'>) {
+    const dto: CreateCustomerRequest = {
+      name: data.name.trim(),
+      companyName: data.company.trim() || undefined,
+      phone: data.phone.trim(),
+      email: data.email.trim() || undefined,
+      address: data.address.trim() || undefined,
+      customerCategory: mapTypeToCategory(data.type),
+      status: data.status === 'active' ? 'Active' : 'Inactive',
+      registeredAt: data.registeredAt ? new Date(data.registeredAt).toISOString() : undefined,
+      notes: data.notes.trim() || undefined,
+    }
+    await customersApi.create(dto)
     setShowAdd(false)
+    fetchCustomers()
   }
 
-  function handleEdit(data: Omit<Customer, 'id'>) {
+  async function handleEdit(data: Omit<Customer, 'id'>) {
     if (!editCustomer) return
-    setCustomers(prev => prev.map(c => c.id === editCustomer.id ? { ...data, id: c.id } : c))
-    if (viewCustomer?.id === editCustomer.id) setViewCustomer({ ...data, id: editCustomer.id })
+    const dto: UpdateCustomerRequest = {
+      id: editCustomer.id,
+      name: data.name.trim(),
+      companyName: data.company.trim() || undefined,
+      phone: data.phone.trim(),
+      email: data.email.trim() || undefined,
+      address: data.address.trim() || undefined,
+      customerCategory: mapTypeToCategory(data.type),
+      status: data.status === 'active' ? 'Active' : 'Inactive',
+      registeredAt: data.registeredAt ? new Date(data.registeredAt).toISOString() : undefined,
+      notes: data.notes.trim() || undefined,
+    }
+    await customersApi.update(editCustomer.id, dto)
     setEditCustomer(null)
+    setViewCustomer(null)
+    fetchCustomers()
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleteCustomer) return
-    setCustomers(prev => prev.filter(c => c.id !== deleteCustomer.id))
-    if (viewCustomer?.id === deleteCustomer.id) setViewCustomer(null)
-    setDeleteCustomer(null)
+    try {
+      await customersApi.delete(deleteCustomer.id)
+      if (viewCustomer?.id === deleteCustomer.id) setViewCustomer(null)
+      setDeleteCustomer(null)
+      fetchCustomers()
+    } catch (err) {
+      console.error('Failed to delete customer:', err)
+      setDeleteCustomer(null)
+    }
   }
 
   return (
@@ -577,7 +627,7 @@ export default function CustomersPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Users}     label="إجمالي العملاء"      value={String(customers.length)} color="success" />
+          <StatCard icon={Users}     label="إجمالي العملاء"      value={String(totalCount)} color="success" />
           <StatCard icon={UserCheck} label="العملاء النشطون"      value={String(activeCount)}      color="primary" />
           <StatCard icon={UserX}     label="غير النشطين"          value={String(inactiveCount)}    color="neutral" />
           <StatCard icon={TrendingUp} label="إجمالي الذمم المدينة" value={fmt(totalReceivable)}     color="warning" small />
@@ -589,12 +639,12 @@ export default function CustomersPage() {
             <Search size={14} className="absolute inset-inline-start-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
             <input
               value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              onChange={e => setSearch(e.target.value)}
               placeholder="بحث بالاسم أو الشركة أو الهاتف..."
               className="w-full h-9 rounded-lg border border-neutral-200 bg-neutral-50 ps-8 pe-3 font-cairo text-[13px] text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-success-300 focus:border-success-400 transition"
             />
             {search && (
-              <button onClick={() => { setSearch(''); setPage(1) }} className="absolute inset-inline-end-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+              <button onClick={() => setSearch('')} className="absolute inset-inline-end-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
                 <X size={13} />
               </button>
             )}
@@ -632,110 +682,116 @@ export default function CustomersPage() {
         {/* Table */}
         <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-neutral-50 border-b border-neutral-100">
-                  {['العميل', 'النوع', 'الهاتف', 'الرصيد', 'آخر طلب', 'الحالة', ''].map((h, i) => (
-                    <th key={i} className={`px-4 py-3 font-cairo font-semibold text-[11px] text-neutral-500 uppercase whitespace-nowrap ${i === 6 ? 'w-10' : 'text-right'}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-50">
-                {slice.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-16 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center">
-                          <Users size={24} className="text-neutral-300" />
-                        </div>
-                        <p className="font-cairo text-[13px] text-neutral-400">لا يوجد عملاء مطابقون للبحث</p>
-                      </div>
-                    </td>
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 size={28} className="animate-spin text-success-500" />
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-neutral-50 border-b border-neutral-100">
+                    {['العميل', 'النوع', 'الهاتف', 'الرصيد', 'آخر طلب', 'الحالة', ''].map((h, i) => (
+                      <th key={i} className={`px-4 py-3 font-cairo font-semibold text-[11px] text-neutral-500 uppercase whitespace-nowrap ${i === 6 ? 'w-10' : 'text-right'}`}>{h}</th>
+                    ))}
                   </tr>
-                ) : slice.map(c => {
-                  const tp = TYPE_CFG[c.type]
-                  const st = STATUS_CFG[c.status]
-                  const balColor = c.balance > 0 ? 'text-warning-600 font-semibold' : c.balance < 0 ? 'text-success-600 font-semibold' : 'text-neutral-500'
-                  return (
-                    <tr
-                      key={c.id}
-                      onClick={() => setViewCustomer(c)}
-                      className="group hover:bg-neutral-50/70 transition-colors cursor-pointer"
-                    >
-                      {/* Name */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-success-50 flex items-center justify-center shrink-0 text-success-600">
-                            {c.type === 'individual' ? <User size={16} /> : <Building2 size={16} />}
+                </thead>
+                <tbody className="divide-y divide-neutral-50">
+                  {customers.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center">
+                            <Users size={24} className="text-neutral-300" />
                           </div>
-                          <div>
-                            <p className="font-cairo font-semibold text-[13px] text-neutral-800">{c.name}</p>
-                            <p className="font-cairo text-[11px] text-neutral-400">{c.company || '—'}</p>
-                          </div>
-                        </div>
-                      </td>
-                      {/* Type */}
-                      <td className="px-4 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-cairo font-semibold ${tp.bg} ${tp.color}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${tp.dot}`} />
-                          {tp.label}
-                        </span>
-                      </td>
-                      {/* Phone */}
-                      <td className="px-4 py-3.5">
-                        <span className="font-cairo text-[13px] text-neutral-600" dir="ltr">{c.phone}</span>
-                      </td>
-                      {/* Balance */}
-                      <td className="px-4 py-3.5">
-                        <span className={`font-cairo text-[13px] ${balColor}`}>
-                          {c.balance === 0 ? '—' : fmt(Math.abs(c.balance))}
-                        </span>
-                      </td>
-                      {/* Last order */}
-                      <td className="px-4 py-3.5">
-                        <span className="font-cairo text-[12px] text-neutral-500">{fmtDate(c.lastOrderDate)}</span>
-                      </td>
-                      {/* Status */}
-                      <td className="px-4 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-cairo font-semibold ${st.bg} ${st.color}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                          {st.label}
-                        </span>
-                      </td>
-                      {/* Actions */}
-                      <td className="px-3 py-3.5">
-                        <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                          <button
-                            onClick={() => setViewCustomer(c)}
-                            className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
-                            title="عرض"
-                          >
-                            <Eye size={14} />
-                          </button>
-                          <button
-                            onClick={() => setEditCustomer(c)}
-                            className="p-1.5 rounded-lg text-neutral-400 hover:text-warning-600 hover:bg-warning-50 transition-colors"
-                            title="تعديل"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteCustomer(c)}
-                            className="p-1.5 rounded-lg text-neutral-400 hover:text-error-600 hover:bg-error-50 transition-colors"
-                            title="حذف"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <p className="font-cairo text-[13px] text-neutral-400">لا يوجد عملاء مطابقون للبحث</p>
                         </div>
                       </td>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                  ) : customers.map(c => {
+                    const tp = TYPE_CFG[c.type] || TYPE_CFG.individual
+                    const st = STATUS_CFG[c.status] || STATUS_CFG.active
+                    const balColor = c.balance > 0 ? 'text-warning-600 font-semibold' : c.balance < 0 ? 'text-success-600 font-semibold' : 'text-neutral-500'
+                    return (
+                      <tr
+                        key={c.id}
+                        onClick={() => setViewCustomer(c)}
+                        className="group hover:bg-neutral-50/70 transition-colors cursor-pointer"
+                      >
+                        {/* Name */}
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-success-50 flex items-center justify-center shrink-0 text-success-600">
+                              {c.type === 'individual' ? <User size={16} /> : <Building2 size={16} />}
+                            </div>
+                            <div>
+                              <p className="font-cairo font-semibold text-[13px] text-neutral-800">{c.name}</p>
+                              <p className="font-cairo text-[11px] text-neutral-400">{c.company || '—'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        {/* Type */}
+                        <td className="px-4 py-3.5">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-cairo font-semibold ${tp.bg} ${tp.color}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${tp.dot}`} />
+                            {tp.label}
+                          </span>
+                        </td>
+                        {/* Phone */}
+                        <td className="px-4 py-3.5">
+                          <span className="font-cairo text-[13px] text-neutral-600" dir="ltr">{c.phone}</span>
+                        </td>
+                        {/* Balance */}
+                        <td className="px-4 py-3.5">
+                          <span className={`font-cairo text-[13px] ${balColor}`}>
+                            {c.balance === 0 ? '—' : fmt(Math.abs(c.balance))}
+                          </span>
+                        </td>
+                        {/* Last order */}
+                        <td className="px-4 py-3.5">
+                          <span className="font-cairo text-[12px] text-neutral-500">{fmtDate(c.lastOrderDate)}</span>
+                        </td>
+                        {/* Status */}
+                        <td className="px-4 py-3.5">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-cairo font-semibold ${st.bg} ${st.color}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                            {st.label}
+                          </span>
+                        </td>
+                        {/* Actions */}
+                        <td className="px-3 py-3.5">
+                          <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => setViewCustomer(c)}
+                              className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                              title="عرض"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              onClick={() => setEditCustomer(c)}
+                              className="p-1.5 rounded-lg text-neutral-400 hover:text-warning-600 hover:bg-warning-50 transition-colors"
+                              title="تعديل"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteCustomer(c)}
+                              className="p-1.5 rounded-lg text-neutral-400 hover:text-error-600 hover:bg-error-50 transition-colors"
+                              title="حذف"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
 
-          <Pagination page={page} totalPages={totalPages} setPage={setPage} total={filtered.length} pageSize={PAGE_SIZE} />
+          <PaginationBar page={page} totalPages={totalPages} setPage={setPage} total={totalCount} pageSize={PAGE_SIZE} />
         </div>
       </div>
 
@@ -768,10 +824,10 @@ export default function CustomersPage() {
 
       {deleteCustomer && (
         <ConfirmDeleteModal
-          title="حذف العميل"
-          message={`هل أنت متأكد من حذف "${deleteCustomer.name}"؟ لا يمكن التراجع عن هذا الإجراء.`}
+          itemName={deleteCustomer.name}
+          itemType="العميل"
           onConfirm={handleDelete}
-          onCancel={() => setDeleteCustomer(null)}
+          onClose={() => setDeleteCustomer(null)}
         />
       )}
     </div>
