@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Eye, EyeOff, Mail, KeyRound } from 'lucide-react'
 import { useNavigate } from 'react-router'
+import { useAuth } from '../../services/AuthContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,6 +128,7 @@ function InputField({
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [form, setForm] = useState<LoginForm>({ email: '', password: '', remember: false })
   const [errors, setErrors] = useState<FormErrors>({})
   const [showPassword, setShowPassword] = useState(false)
@@ -156,10 +158,14 @@ export default function LoginPage() {
     }
     setErrors({})
     setIsLoading(true)
-    // Simulate auth
-    await new Promise((r) => setTimeout(r, 1400))
-    setIsLoading(false)
-    navigate('/')
+    try {
+      await login({ email: form.email, password: form.password })
+      navigate('/')
+    } catch (err: any) {
+      setErrors({ general: err.message || 'فشل تسجيل الدخول — تحقق من البريد وكلمة المرور' })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   function setField(field: keyof LoginForm) {
