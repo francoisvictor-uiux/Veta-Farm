@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   Search, Plus, Filter, ChevronDown, ChevronLeft, ChevronRight, Edit2, Trash2, Eye,
   Calendar, Info, Scale, Target, PlayCircle, Truck, ScanLine, Type, Camera,
-  X, Check, CalendarDays, Loader2,
+  X, Check, CalendarDays, Loader2, BadgeDollarSign, TrendingUp, Activity, ShoppingCart, Clock,
 } from 'lucide-react'
 import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 import {
@@ -38,13 +38,30 @@ interface Cattle {
   type: CattleType
   breed?: string
   entryDate: string
-  avgWeight?: number
-  vehicleNumber?: string
-  weighbridgePhoto?: string
+  purchasePrice: number
+  sellingPrice?: number
+  saleDate?: string
+  avgWeight: number // Initial weight
+  currentWeight?: number
+  vehicleNumber: string | null
+  weighbridgePhoto: string | null
   status: CattleStatus
   batchName?: string
 }
 
+const INIT_BATCHES: Batch[] = [
+  { id: 1, name: 'دورة تسمين هولشتاين - 2026/01', type: 'fattening', startDate: '2026-01-10', status: 'active', targetWeight: 450 },
+  { id: 2, name: 'دورة حلاب مبدئية', type: 'dairy', startDate: '2025-06-01', status: 'active' },
+  { id: 3, name: 'تسمين عجول 2025', type: 'fattening', startDate: '2025-02-15', endDate: '2025-10-20', status: 'closed', targetWeight: 500 },
+]
+
+const INIT_CATTLE: Cattle[] = [
+  { id: 1, batchId: 1, tag: 'TAG-1001', type: 'fattening', breed: 'هولشتاين', entryDate: '2026-01-12', purchasePrice: 12000, avgWeight: 180, currentWeight: 310, vehicleNumber: 'أ ل ج 1234', weighbridgePhoto: 'card_1.jpg', status: 'active' },
+  { id: 2, batchId: 1, tag: 'TAG-1002', type: 'fattening', breed: 'هولشتاين', entryDate: '2026-01-12', purchasePrice: 12500, avgWeight: 185, currentWeight: 320, vehicleNumber: 'أ ل ج 1234', weighbridgePhoto: null, status: 'active' },
+  { id: 3, batchId: 2, tag: 'TAG-2050', type: 'dairy', breed: 'سيمنتال', entryDate: '2025-06-05', purchasePrice: 28000, avgWeight: 420, vehicleNumber: 'ط س ع 987', weighbridgePhoto: 'card_7.jpg', status: 'active' },
+  { id: 4, batchId: 1, tag: undefined, type: 'fattening', breed: 'بلدي', entryDate: '2026-01-15', purchasePrice: 11000, avgWeight: 160, currentWeight: 200, vehicleNumber: null, weighbridgePhoto: null, status: 'quarantine' },
+  { id: 5, batchId: 3, tag: 'TAG-999', type: 'fattening', breed: 'برازيلي', entryDate: '2025-02-16', purchasePrice: 10500, sellingPrice: 24500, saleDate: '2025-10-18', avgWeight: 140, currentWeight: 480, vehicleNumber: null, weighbridgePhoto: null, status: 'sold' },
+]
 const TYPE_CFG: Record<CattleType, { label: string; color: string; bg: string }> = {
   dairy: { label: 'حلاب', color: 'text-info-700', bg: 'bg-info-50' },
   fattening: { label: 'تسمين', color: 'text-warning-700', bg: 'bg-warning-50' },
@@ -150,12 +167,12 @@ function StatCard({ label, value, sub, icon: Icon, iconColor, iconBg }: any) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Heads Form Type
 // ─────────────────────────────────────────────────────────────────────────────
-
 interface HeadFormState {
   batchId: string
   type: CattleType | ''
   count: string
-  avgWeight: string
+  totalWeight: string
+  purchasePrice: string
   breed: string
   tag: string
   vehicleNumber: string
@@ -165,7 +182,7 @@ interface HeadFormState {
 
 function emptyHeadForm(): HeadFormState {
   return {
-    batchId: '', type: '', count: '1', avgWeight: '', breed: '', tag: '', vehicleNumber: '', weighbridgePhoto: null,
+    batchId: '', type: '', count: '1', totalWeight: '', purchasePrice: '', breed: '', tag: '', vehicleNumber: '', weighbridgePhoto: null,
     entryDate: new Date().toISOString().split('T')[0]
   }
 }
@@ -317,7 +334,7 @@ function HeadsTab({ cattle, batches, onAdd, onEdit, onDelete }: {
       {editCattle && (
         <HeadFormModal batches={batches} initial={{
           batchId: String(editCattle.batchId), type: editCattle.type, count: '1',
-          avgWeight: String(editCattle.avgWeight || ''), breed: editCattle.breed || '',
+          totalWeight: String(editCattle.avgWeight), purchasePrice: String(editCattle.purchasePrice), breed: editCattle.breed || '',
           tag: editCattle.tag || '', vehicleNumber: editCattle.vehicleNumber || '', weighbridgePhoto: null,
           entryDate: editCattle.entryDate
         }} isEdit={true}
@@ -325,7 +342,7 @@ function HeadsTab({ cattle, batches, onAdd, onEdit, onDelete }: {
           onClose={() => setEditCattle(null)} />
       )}
       {viewCattle && (
-        <HeadViewDrawer cattle={viewCattle} batches={batches}
+        <HeadReportModal cattle={viewCattle} batches={batches}
           onClose={() => setViewCattle(null)}
           onEdit={() => { setEditCattle(viewCattle); setViewCattle(null) }} />
       )}
@@ -353,7 +370,8 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
     const errs: Record<string, string> = {}
     if (!form.type) errs.type = 'يرجى اختيار نوع الإضافة'
     if (!form.count || parseInt(form.count) < 1) errs.count = 'يرجى إدخال عدد صحيح أكبر من صفر'
-    if (!form.avgWeight || parseFloat(form.avgWeight) <= 0) errs.avgWeight = 'يرجى إدخال متوسط الوزن صحيح'
+    if (!form.totalWeight || parseFloat(form.totalWeight) <= 0) errs.totalWeight = 'يرجى إدخال الوزن الإجمالي صحيح'
+    if (!form.purchasePrice || parseFloat(form.purchasePrice) <= 0) errs.purchasePrice = 'يرجى إدخال سعر الشراء'
     if (!form.batchId) errs.batchId = 'يرجى اختيار الدورة'
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
     onSave(form)
@@ -401,24 +419,38 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
               </div>
 
               <div>
-                <label className={lbl}>العدد <span className="text-error-500">*</span></label>
+                <label className={lbl}>سعر الشراء للرأس (ج.م) <span className="text-error-500">*</span></label>
                 <div className="relative">
-                  <Target size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-                  <input type="number" min="1" disabled={isEdit} value={form.count} onChange={e => { setForm({ ...form, count: e.target.value }); delete errors.count; }}
-                    className={`${inp} pe-10 ${errors.count ? 'border-error-400 focus:ring-error-400/20' : ''}`} placeholder="1" />
+                  <BadgeDollarSign size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                  <input type="number" step="0.1" value={form.purchasePrice} onChange={e => { setForm({ ...form, purchasePrice: e.target.value }); delete errors.purchasePrice; }}
+                    className={`${inp} pe-10 ${errors.purchasePrice ? 'border-error-400 focus:ring-error-400/20' : ''}`} placeholder="مثال: 12000" />
                 </div>
-                {errors.count && <p className="text-error-500 text-[11px] mt-1 pr-1">{errors.count}</p>}
+                {errors.purchasePrice && <p className="text-error-500 text-[11px] mt-1 pr-1">{errors.purchasePrice}</p>}
               </div>
             </div>
 
-            <div>
-              <label className={lbl}>متوسط وزن الرأس (كجم) <span className="text-error-500">*</span></label>
-              <div className="relative">
-                <Scale size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input type="number" step="0.5" value={form.avgWeight} onChange={e => { setForm({ ...form, avgWeight: e.target.value }); delete errors.avgWeight; }}
-                  className={`${inp} pe-10 ${errors.avgWeight ? 'border-error-400 focus:ring-error-400/20' : ''}`} placeholder="مثال: 150" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={lbl}>الوزن الإجمالي للدفعة (كجم) <span className="text-error-500">*</span></label>
+                <div className="relative">
+                  <Scale size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                  <input type="number" step="0.5" value={form.totalWeight} onChange={e => { setForm({ ...form, totalWeight: e.target.value }); delete errors.totalWeight; }}
+                    className={`${inp} pe-10 ${errors.totalWeight ? 'border-error-400 focus:ring-error-400/20' : ''}`} placeholder="مثال: 4500" />
+                </div>
+                {errors.totalWeight && <p className="text-error-500 text-[11px] mt-1 pr-1">{errors.totalWeight}</p>}
               </div>
-              {errors.avgWeight && <p className="text-error-500 text-[11px] mt-1 pr-1">{errors.avgWeight}</p>}
+
+              <div>
+                <label className={lbl}>متوسط وزن الرأس <span className="text-neutral-400 font-normal lowercase">(تلقائي)</span></label>
+                <div className="relative">
+                  <Target size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-300" />
+                  <input type="text" disabled value={
+                    (form.totalWeight && form.count && parseFloat(form.totalWeight) > 0 && parseInt(form.count) > 0)
+                      ? (parseFloat(form.totalWeight) / parseInt(form.count)).toFixed(1) + ' كجم'
+                      : '—'
+                  } className={`${inp} pe-10 bg-neutral-50/50 cursor-not-allowed text-primary-600 font-bold`} />
+                </div>
+              </div>
             </div>
 
             <div>
@@ -490,72 +522,167 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
   )
 }
 
-function HeadViewDrawer({ cattle, batches, onClose, onEdit }: {
+function HeadReportModal({ cattle, batches, onClose, onEdit }: {
   cattle: Cattle; batches: Batch[]; onClose: () => void; onEdit: () => void
 }) {
-  const tc = TYPE_CFG[cattle.type]
-  const sc = STATUS_CFG[cattle.status]
   const b = batches.find(x => x.id === cattle.batchId)
+  
+  // Mocking detailed expenses for demonstration
+  const weightGain = (cattle.currentWeight || cattle.avgWeight) - cattle.avgWeight
+  const daysInFarm = Math.max(1, Math.round((new Date().getTime() - new Date(cattle.entryDate).getTime()) / (1000 * 60 * 60 * 24)))
+  
+  const dailyGain = (weightGain / daysInFarm).toFixed(2)
+  
+  const mockExpenses = [
+    { label: 'تغذية (أعلاف)', value: daysInFarm * 45, icon: Activity },
+    { label: 'رعاية طبية وتحصينات', value: 850, icon: Activity },
+    { label: 'عمالة وإشراف', value: daysInFarm * 10, icon: Activity },
+    { label: 'نقل وتجهيزات', value: 1200, icon: Truck },
+  ]
+  const totalExpenses = mockExpenses.reduce((sum, e) => sum + e.value, 0)
+  const totalCost = cattle.purchasePrice + totalExpenses
+  
+  const isSold = cattle.status === 'sold'
+  const revenue = isSold ? (cattle.sellingPrice || 0) : 0
+  const profit = isSold ? (revenue - totalCost) : 0
 
-  function Row({ icon: Icon, label, value, ltr }: { icon: React.ElementType; label: string; value: string; ltr?: boolean }) {
-    return (
-      <div className="flex items-start gap-3 py-2.5 border-b border-neutral-100 last:border-0">
-        <div className="w-7 h-7 rounded-[8px] bg-neutral-100 flex items-center justify-center shrink-0 mt-0.5">
-          <Icon size={13} className="text-neutral-500" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-cairo text-[10px] text-neutral-400 mb-0.5">{label}</p>
-          <p className="font-cairo font-semibold text-[13px] text-neutral-900" dir={ltr ? 'ltr' : 'rtl'}>{value || '—'}</p>
-        </div>
-      </div>
-    )
-  }
+  const formatCurrency = (val: number) => val.toLocaleString('ar-EG') + ' ج.م'
 
   return (
-    <div className="fixed inset-0 z-[600] flex" dir="rtl">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative mr-auto w-full max-w-[420px] h-full bg-white shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
-        {/* Header */}
-        <div className="shrink-0 px-5 py-5 bg-gradient-to-l from-primary-50 to-white border-b border-neutral-100">
-          <div className="flex items-center justify-between mb-4">
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-white transition-colors">
-              <X size={15} />
-            </button>
-            <button onClick={onEdit}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-primary-500 text-white font-cairo font-semibold text-[12px] hover:bg-primary-600 transition-colors">
-              <Edit2 size={12} /> تعديل
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-[12px] bg-primary-100 flex items-center justify-center shrink-0">
-              <ScanLine size={22} className="text-primary-600" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="font-cairo font-bold text-[17px] text-neutral-900 leading-snug">{cattle.tag || 'محمّع (بلا وسم)'}</h2>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <span className={`inline-flex items-center gap-1 font-cairo font-semibold text-[11px] px-2 py-0.5 rounded-full ${tc.bg} ${tc.color}`}>{tc.label}</span>
-                <span className={`inline-flex items-center gap-1 font-cairo font-semibold text-[11px] px-2 py-0.5 rounded-full ${sc.bg} ${sc.color}`}>{sc.label}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="shrink-0 px-5 py-3 border-b border-neutral-100 bg-neutral-50/60">
+    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4" dir="rtl">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm shadow-2xl" onClick={onClose} />
+      <div className="relative bg-white rounded-[24px] shadow-2xl w-full max-w-[850px] max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        
+        {/* Header Section */}
+        <div className="shrink-0 px-8 py-6 bg-gradient-to-l from-primary-50/50 to-white border-b border-neutral-100 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="text-center flex-1">
-              <p className="font-cairo font-bold text-[20px] text-warning-600 leading-none">{cattle.avgWeight}</p>
-              <p className="font-cairo text-[11px] text-neutral-400 mt-0.5">وزن الرأس (كجم)</p>
+            <div className="w-14 h-14 rounded-[16px] bg-primary-100 flex items-center justify-center shrink-0 shadow-inner">
+              <ScanLine size={28} className="text-primary-600" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="font-cairo font-bold text-[22px] text-neutral-900 leading-none">{cattle.tag || 'محمّع (بلا وسم)'}</h2>
+                <span className={`px-2.5 py-0.5 rounded-full font-cairo font-semibold text-[11px] ${STATUS_CFG[cattle.status].bg} ${STATUS_CFG[cattle.status].color}`}>
+                  {STATUS_CFG[cattle.status].label}
+                </span>
+              </div>
+              <p className="font-cairo text-[13px] text-neutral-500">سارية في دورة: <span className="font-semibold text-primary-700">{b?.name || '—'}</span></p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onEdit} className="h-10 px-5 flex items-center gap-2 rounded-[12px] bg-white border border-neutral-200 text-neutral-600 font-cairo font-bold text-[13px] hover:bg-neutral-50 transition-colors">
+              <Edit2 size={15} /> تعديل البيانات
+            </button>
+            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-100 transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* Purchase Info */}
+            <div className="p-5 rounded-[20px] bg-neutral-50 border border-neutral-100 relative overflow-hidden group">
+               <ShoppingCart className="absolute -inline-end-4 -top-4 w-20 h-20 text-neutral-200/50 group-hover:text-primary-200/50 transition-colors" />
+               <p className="font-cairo text-[12px] text-neutral-500 mb-2">بيانات الشراء</p>
+               <h3 className="font-cairo font-bold text-[20px] text-neutral-900 mb-1">{formatCurrency(cattle.purchasePrice)}</h3>
+               <p className="font-cairo text-[11px] text-neutral-400 flex items-center gap-1"><Calendar size={12}/> دخول: {cattle.entryDate}</p>
+            </div>
+            {/* Fattening Info */}
+            <div className="p-5 rounded-[20px] bg-neutral-50 border border-neutral-100 relative overflow-hidden group">
+               <Activity className="absolute -inline-end-4 -top-4 w-20 h-20 text-neutral-200/50 group-hover:text-warning-200/50 transition-colors" />
+               <p className="font-cairo text-[12px] text-neutral-500 mb-2">إجمالي المصروفات (تسمين)</p>
+               <h3 className="font-cairo font-bold text-[20px] text-warning-700 mb-1">{formatCurrency(totalExpenses)}</h3>
+               <p className="font-cairo text-[11px] text-neutral-400 flex items-center gap-1"><Clock size={12}/> منذ {daysInFarm} يوماً بالرصيد</p>
+            </div>
+            {/* Sale / Profit Info */}
+            <div className={`p-5 rounded-[20px] border relative overflow-hidden group ${isSold ? 'bg-success-50 border-success-100' : 'bg-neutral-50 border-neutral-100'}`}>
+               <TrendingUp className={`absolute -inline-end-4 -top-4 w-20 h-20 opacity-20 ${isSold ? 'text-success-500' : 'text-neutral-500'}`} />
+               <p className="font-cairo text-[12px] text-neutral-500 mb-2">{isSold ? 'صافي الربح' : 'القيمة الاستثمارية (تقديري)'}</p>
+               <h3 className={`font-cairo font-bold text-[20px] mb-1 ${isSold ? 'text-success-700' : 'text-neutral-900'}`}>
+                 {isSold ? formatCurrency(profit) : 'قيد الدورة'}
+               </h3>
+               <p className="font-cairo text-[11px] text-neutral-400">
+                 {isSold ? `تم البيع بـ ${formatCurrency(revenue)}` : 'لم يتم البيع بعد'}
+               </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Expenses Details */}
+            <div className="space-y-4">
+               <h4 className="font-cairo font-bold text-[15px] text-neutral-800 border-b border-neutral-100 pb-2">تفصيل مصروفات الدورة</h4>
+               <div className="space-y-3">
+                 {mockExpenses.map((ex, i) => (
+                   <div key={i} className="flex items-center justify-between p-3.5 rounded-[12px] bg-white border border-neutral-100 shadow-sm">
+                     <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 rounded-lg bg-neutral-50 flex items-center justify-center">
+                         <ex.icon size={16} className="text-neutral-500" />
+                       </div>
+                       <span className="font-cairo text-[13px] text-neutral-700">{ex.label}</span>
+                     </div>
+                     <span className="font-cairo font-bold text-[14px] text-neutral-900">{formatCurrency(ex.value)}</span>
+                   </div>
+                 ))}
+                 <div className="flex items-center justify-between p-4 rounded-[12px] bg-neutral-900 text-white mt-4">
+                    <span className="font-cairo font-bold text-[14px]">إجمالي التكلفة الحالية</span>
+                    <span className="font-cairo font-bold text-[16px]">{formatCurrency(totalCost)}</span>
+                 </div>
+               </div>
+            </div>
+
+            {/* Growth Tracking */}
+            <div className="space-y-4">
+               <h4 className="font-cairo font-bold text-[15px] text-neutral-800 border-b border-neutral-100 pb-2">تتبع النمو والوزن</h4>
+               <div className="bg-neutral-50 rounded-[20px] p-6 border border-neutral-100">
+                  <div className="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <p className="font-cairo text-[11px] text-neutral-400 mb-1">وزن الدخول</p>
+                      <p className="font-cairo font-bold text-[18px] text-neutral-700">{cattle.avgWeight} كجم</p>
+                    </div>
+                    <div>
+                      <p className="font-cairo text-[11px] text-neutral-400 mb-1">{isSold ? 'وزن البيع' : 'الوزن الحالي'}</p>
+                      <p className="font-cairo font-bold text-[18px] text-primary-600">{(cattle.currentWeight || cattle.avgWeight)} كجم</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-5">
+                    <div>
+                      <div className="flex justify-between items-end mb-2">
+                         <span className="font-cairo text-[12px] text-neutral-500">إجمالي الزيادة في الوزن</span>
+                         <span className="font-cairo font-bold text-[14px] text-success-600">+{weightGain} كجم</span>
+                      </div>
+                      <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-success-500 rounded-full" style={{ width: '65%' }} />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-white rounded-[15px] border border-neutral-100 shadow-sm">
+                       <div className="flex items-center gap-2">
+                         <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
+                            <TrendingUp size={16} className="text-primary-600" />
+                         </div>
+                         <span className="font-cairo text-[12px] text-neutral-600">معدل التحويل اليومي</span>
+                       </div>
+                       <span className="font-cairo font-bold text-[14px] text-primary-700">{dailyGain} كجم / يوم</span>
+                    </div>
+                  </div>
+               </div>
+               <div className="p-4 rounded-[15px] bg-info-50 border border-info-100">
+                  <div className="flex items-start gap-2.5">
+                    <Info size={16} className="text-info-600 mt-1" />
+                    <p className="font-cairo text-[12px] text-info-700 leading-relaxed">
+                      يتم حساب التكاليف والمعدلات بناءً على التغذية المدخلة والوزن التقريبي لليوم.
+                    </p>
+                  </div>
+               </div>
             </div>
           </div>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
-          <Row icon={CalendarDays} label="تاريخ الدخول" value={cattle.entryDate} ltr />
-          <Row icon={Target} label="الدورة المرتبطة" value={b?.name || '—'} />
-          <Row icon={Type} label="السلالة" value={cattle.breed || '—'} />
-          <Row icon={Truck} label="رقم السيارة" value={cattle.vehicleNumber || '—'} />
+        <div className="shrink-0 px-8 py-5 border-t border-neutral-100 bg-neutral-50 flex items-center justify-between">
+           <p className="font-cairo text-[12px] text-neutral-400">تم إنشاء هذا التقرير بتاريخ {new Date().toLocaleDateString('ar-EG')}</p>
+           <button onClick={onClose} className="px-8 h-10 rounded-[12px] bg-neutral-900 text-white font-cairo font-bold text-[13px] hover:bg-neutral-800 shadow-lg transition-all">إغلاق التقرير</button>
         </div>
       </div>
     </div>
@@ -1047,12 +1174,13 @@ export default function CattlePage() {
             type: (typeStr.includes('dairy') ? 'dairy' : 'fattening') as CattleType,
             breed: c.breed,
             entryDate: c.entryDate,
-            avgWeight: c.averageWeight,
-            vehicleNumber: c.vehicleNumber,
-            weighbridgePhoto: c.weighbridgePhotoUrl,
+            purchasePrice: 0,
+            avgWeight: c.averageWeight || 0,
+            vehicleNumber: (c as any).vehicleNumber || null,
+            weighbridgePhoto: (c as any).weighbridgePhotoUrl || null,
             status: status,
             batchName: c.batchName,
-          }
+          } as Cattle
         })
         setCattle(mappedCattle)
       }
@@ -1114,6 +1242,7 @@ export default function CattlePage() {
   }
 
   // Heads
+
   async function handleAddHeads(form: HeadFormState) {
     try {
       const count = parseInt(form.count) || 1
@@ -1175,6 +1304,7 @@ export default function CattlePage() {
       console.error('Error editing head:', err)
       setError('فشل تعديل الرأس')
     }
+
   }
 
   async function handleDeleteHead(id: string | number) {

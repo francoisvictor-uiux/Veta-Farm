@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { toast } from 'sonner'
 import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 import {
   Plus, Search, X, UserCheck, Users, UserX, Briefcase,
@@ -659,6 +660,91 @@ function StatCard({ label, value, sub, icon: Icon, iconColor, iconBg }: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Bulk Action Modals
+// ─────────────────────────────────────────────────────────────────────────────
+
+function BulkTipModal({ count, onClose, onConfirm }: { count: number; onClose: () => void; onConfirm: (total: number) => void }) {
+  const [total, setTotal] = useState('')
+  const num = parseFloat(total)
+  const isValid = !isNaN(num) && num > 0
+  const perPerson = isValid ? (num / count) : 0
+
+  return (
+    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl" onClick={onClose}>
+      <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[400px] p-6" onClick={e => e.stopPropagation()}>
+        <h3 className="font-cairo font-bold text-[18px] text-primary-900 mb-1">صرف إكرامية مجمعة</h3>
+        <p className="font-cairo text-[13px] text-neutral-500 mb-5">سيتم تقسيم المبلغ المكتوب بالتساوي على {count} موظفاً.</p>
+        
+        <label className="block text-[12px] font-semibold text-neutral-600 mb-2">المبلغ الإجمالي (ج.م) <span className="text-red-400">*</span></label>
+        <input type="number" min="1" value={total} onChange={e => setTotal(e.target.value)} placeholder="مثال: 1000" className="w-full h-11 px-3 rounded-[10px] border border-neutral-200 bg-neutral-50 text-[14px] font-bold text-primary-700 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 mb-3" dir="ltr" autoFocus />
+        
+        <div className="flex items-center justify-between px-4 py-3 bg-primary-50 rounded-[10px] mb-6">
+          <span className="font-cairo text-[12px] text-primary-700 font-semibold">نصيب الموظف الواحد</span>
+          <span className="font-cairo text-[16px] font-bold text-primary-800">{perPerson ? perPerson.toFixed(2) : '0'} ج.م</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={() => isValid && onConfirm(num)} disabled={!isValid} className="flex-1 h-11 bg-primary-500 text-white rounded-[10px] font-cairo font-bold text-[14px] hover:bg-primary-600 disabled:opacity-50 transition-colors">تأكيد الصرف</button>
+          <button onClick={onClose} className="px-5 h-11 border border-neutral-200 text-neutral-600 rounded-[10px] font-cairo font-bold text-[14px] hover:bg-neutral-50 transition-colors">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BulkDiscountModal({ count, onClose, onConfirm }: { count: number; onClose: () => void; onConfirm: (amount: number, reason: string) => void }) {
+  const [amount, setAmount] = useState('')
+  const [reason, setReason] = useState('')
+  const num = parseFloat(amount)
+  const isValid = !isNaN(num) && num > 0
+
+  return (
+    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl" onClick={onClose}>
+      <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[400px] p-6" onClick={e => e.stopPropagation()}>
+        <h3 className="font-cairo font-bold text-[18px] text-red-600 mb-1">تطبيق خصم مجمّع</h3>
+        <p className="font-cairo text-[13px] text-neutral-500 mb-5">سيتم تطبيق هذا الخصم بالكامل على كل موظف من الـ {count} موظفين.</p>
+        
+        <label className="block text-[12px] font-semibold text-neutral-600 mb-2">قيمة الخصم للفرد (ج.م) <span className="text-red-400">*</span></label>
+        <input type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} placeholder="مثال: 100" className="w-full h-11 px-3 rounded-[10px] border border-neutral-200 bg-neutral-50 text-[14px] font-bold text-red-600 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 mb-4" dir="ltr" autoFocus />
+        
+        <label className="block text-[12px] font-semibold text-neutral-600 mb-2">سبب الخصم (اختياري)</label>
+        <input type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder="تأخير، غياب، إلخ..." className="w-full h-10 px-3 rounded-[10px] border border-neutral-200 bg-neutral-50 text-[13px] text-neutral-700 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 mb-6" dir="rtl" />
+
+        <div className="flex items-center gap-3">
+          <button onClick={() => isValid && onConfirm(num, reason)} disabled={!isValid} className="flex-1 h-11 bg-red-600 text-white rounded-[10px] font-cairo font-bold text-[14px] hover:bg-red-700 disabled:opacity-50 transition-colors">تأكيد الخصم</button>
+          <button onClick={onClose} className="px-5 h-11 border border-neutral-200 text-neutral-600 rounded-[10px] font-cairo font-bold text-[14px] hover:bg-neutral-50 transition-colors">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BulkAttendanceModal({ count, onClose, onConfirm }: { count: number; onClose: () => void; onConfirm: (status: string) => void }) {
+  const [status, setStatus] = useState('present')
+  return (
+    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl" onClick={onClose}>
+      <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[400px] p-6" onClick={e => e.stopPropagation()}>
+        <h3 className="font-cairo font-bold text-[18px] text-success-700 mb-1">تسجيل حضور / انصراف مجمّع</h3>
+        <p className="font-cairo text-[13px] text-neutral-500 mb-5">تحديد حالة اليوم لعدد {count} موظفين.</p>
+        
+        <label className="block text-[12px] font-semibold text-neutral-600 mb-2">حالة اليوم</label>
+        <select value={status} onChange={e => setStatus(e.target.value)} className="w-full h-11 px-3 rounded-[10px] border border-neutral-200 bg-neutral-50 text-[14px] text-neutral-800 outline-none focus:border-success-500 focus:ring-2 focus:ring-success-500/20 mb-6 cursor-pointer">
+          <option value="present">حاضر (في الموعد)</option>
+          <option value="late">تأخير</option>
+          <option value="absent">غياب</option>
+          <option value="on_leave">إجازة</option>
+        </select>
+        
+        <div className="flex items-center gap-3">
+          <button onClick={() => onConfirm(status)} className="flex-1 h-11 bg-success-600 text-white rounded-[10px] font-cairo font-bold text-[14px] hover:bg-success-700 transition-colors">تسجيل</button>
+          <button onClick={onClose} className="px-5 h-11 border border-neutral-200 text-neutral-600 rounded-[10px] font-cairo font-bold text-[14px] hover:bg-neutral-50 transition-colors">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Page
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -673,6 +759,11 @@ export default function EmployeesPage() {
   const [showModal,    setShowModal]    = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null)
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkTip, setShowBulkTip] = useState(false)
+  const [showBulkDiscount, setShowBulkDiscount] = useState(false)
+  const [showBulkAttendance, setShowBulkAttendance] = useState(false)
+
   const filtered = useMemo(() => employees.filter(e => {
     const q = search.toLowerCase()
     const matchSearch = !q || e.name.includes(q) || e.jobTitle.includes(q) || e.department.includes(q) || e.email.includes(q) || e.nationalId.includes(q)
@@ -682,9 +773,23 @@ export default function EmployeesPage() {
   }), [employees, search, filterRole, filterStatus])
 
   const pg = usePagination(filtered, 7)
-  useEffect(() => { pg.setPage(1) }, [search, filterRole, filterStatus])
+  useEffect(() => { pg.setPage(1); setSelectedIds(new Set()) }, [search, filterRole, filterStatus])
 
   const hasFilters = !!(search || filterRole !== 'all' || filterStatus !== 'all')
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === filtered.length && filtered.length > 0) setSelectedIds(new Set())
+    else setSelectedIds(new Set(filtered.map(e => e.id)))
+  }
 
   function openAdd()             { setEditTarget(null); setShowModal(true) }
   function openEdit(e: Employee) { setViewTarget(null); setEditTarget(e); setShowModal(true) }
@@ -706,6 +811,30 @@ export default function EmployeesPage() {
     setEmployees(prev => prev.filter(e => e.id !== id))
     setDeleteTarget(null)
     if (viewTarget?.id === id) setViewTarget(null)
+  }
+
+  function handleBulkTip(totalAmt: number) {
+    const perPerson = totalAmt / selectedIds.size
+    toast.success('تم صرف الإكرامية بنجاح', { description: `تم توزيع ${totalAmt} ج.م على ${selectedIds.size} موظفاً (بواقع ${perPerson.toFixed(2)} ج.م لكل موظف).` })
+    setShowBulkTip(false)
+    setSelectedIds(new Set())
+  }
+
+  function handleBulkDiscount(amount: number, reason: string) {
+    toast.success('تمت إضافة الخصم بنجاح', { description: `تم خصم ${amount} ج.م من ${selectedIds.size} موظفاً.` + (reason ? ` السبب: ${reason}` : '') })
+    setShowBulkDiscount(false)
+    setSelectedIds(new Set())
+  }
+
+  function handleBulkAttendance(status: string) {
+    let lbl = 'حاضر'
+    if (status === 'late') lbl = 'متأخر'
+    else if (status === 'absent') lbl = 'غائب'
+    else if (status === 'on_leave') lbl = 'إجازة'
+    
+    toast.success('تم تسجيل الحضور والانصراف بنجاح', { description: `تم تسجيل حالة (${lbl}) لـ ${selectedIds.size} موظفاً.` })
+    setShowBulkAttendance(false)
+    setSelectedIds(new Set())
   }
 
   const selectCls = 'h-10 px-3 rounded-[12px] border border-neutral-200 bg-white font-cairo text-[13px] text-neutral-700 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 shadow-sm cursor-pointer'
@@ -767,9 +896,40 @@ export default function EmployeesPage() {
           {hasFilters && <span className="font-cairo text-[12px] text-neutral-400 me-auto">{filtered.length} نتيجة</span>}
         </div>
 
+        {/* Bulk Toolbar */}
+        {selectedIds.size > 0 && (
+          <div className="bg-primary-50 border border-primary-100 rounded-[14px] px-5 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <span className="font-cairo font-bold text-[13px] text-primary-800">
+                تم تحديد {selectedIds.size} موظف/موظفين
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => setShowBulkTip(true)} className="px-3 py-1.5 bg-white text-primary-700 border border-primary-200 rounded-[8px] font-cairo font-semibold text-[12px] hover:bg-primary-100 transition-colors shadow-sm">
+                إضافة إكرامية
+              </button>
+              <button onClick={() => setShowBulkDiscount(true)} className="px-3 py-1.5 bg-white text-red-600 border border-red-200 rounded-[8px] font-cairo font-semibold text-[12px] hover:bg-red-50 transition-colors shadow-sm">
+                إضافة خصم
+              </button>
+              <button onClick={() => setShowBulkAttendance(true)} className="px-3 py-1.5 bg-white text-success-700 border border-success-200 rounded-[8px] font-cairo font-semibold text-[12px] hover:bg-success-50 transition-colors shadow-sm">
+                حضور وانصراف
+              </button>
+              <div className="w-px h-5 bg-primary-200 mx-1" />
+              <button onClick={() => setSelectedIds(new Set())} className="px-2 py-1.5 text-neutral-500 hover:text-neutral-700 font-cairo font-semibold text-[12px] transition-colors">
+                إلغاء التحديد
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
         <div className="bg-white border border-neutral-200 rounded-[14px] overflow-hidden">
-          <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_88px] items-center px-5 py-3 border-b border-neutral-100 bg-neutral-50/80">
+          <div className="hidden md:grid grid-cols-[40px_2fr_1fr_1fr_1fr_1fr_88px] items-center px-5 py-3 border-b border-neutral-100 bg-neutral-50/80">
+            <div className="flex items-center justify-center">
+              <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                     checked={selectedIds.size > 0 && selectedIds.size === filtered.length}
+                     onChange={toggleSelectAll} />
+            </div>
             {['الموظف','الوظيفة','الحالة','القسم','بداية العمل',''].map((h,i)=>(
               <span key={i} className="font-cairo font-semibold text-[10.5px] text-neutral-400 uppercase tracking-widest">{h}</span>
             ))}
@@ -793,13 +953,26 @@ export default function EmployeesPage() {
             <ul style={{ minHeight: `${pg.pageSize * 60}px` }}>
               {pg.slice.map((emp, i) => (
                 <li key={emp.id}
+                  onClick={() => toggleSelect(emp.id)}
                   className={[
-                    'group flex flex-col md:grid md:grid-cols-[2fr_1fr_1fr_1fr_1fr_88px] items-start md:items-center px-5 py-3.5 transition-colors hover:bg-primary-50/20 cursor-default',
+                    'group flex flex-col md:grid md:grid-cols-[40px_2fr_1fr_1fr_1fr_1fr_88px] items-start md:items-center px-5 py-3.5 transition-colors cursor-pointer',
+                    selectedIds.has(emp.id) ? 'bg-primary-50/40' : 'hover:bg-primary-50/20',
                     i < pg.slice.length - 1 ? 'border-b border-neutral-100' : '',
                   ].join(' ')}
                 >
+                  <div className="hidden md:flex items-center justify-center w-full md:w-auto mb-2 md:mb-0">
+                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                           checked={selectedIds.has(emp.id)}
+                           onChange={() => {}} // state updated by li onClick
+                    />
+                  </div>
                   {/* Employee */}
                   <div className="flex items-center gap-3 min-w-0">
+                    <div className="md:hidden">
+                      <input type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                             checked={selectedIds.has(emp.id)}
+                             onChange={() => {}} />
+                    </div>
                     <AvatarCircle letter={emp.avatar} role={emp.role} />
                     <div className="min-w-0">
                       <p className="font-cairo font-semibold text-[13px] text-neutral-900 leading-snug truncate">{emp.name}</p>
@@ -814,7 +987,7 @@ export default function EmployeesPage() {
                   </span>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-0.5 mt-2 md:mt-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-0.5 mt-2 md:mt-0" onClick={e => e.stopPropagation()}>
                     <button onClick={() => openView(emp)}
                       className="w-8 h-8 flex items-center justify-center rounded-[8px] text-neutral-400 hover:text-info-600 hover:bg-info-50 transition-colors" title="عرض">
                       <Eye size={14} />

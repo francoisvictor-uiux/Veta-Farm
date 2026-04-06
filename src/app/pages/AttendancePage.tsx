@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Search, X, Plus, Clock, Users, UserCheck, UserX, AlertCircle,
@@ -148,7 +148,7 @@ function ManualModal({ initial, isEdit, onSave, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[480px] max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[480px] max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="h-1 w-full bg-gradient-to-l from-[#1a6b3c] to-[#2d9e5f] shrink-0" />
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 shrink-0">
@@ -322,7 +322,7 @@ function QuickTxModal({ empId, type, onSave, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[380px] overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[380px] overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className={`h-1 w-full ${cfg.bg.replace('50', '400')}`} />
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
@@ -382,6 +382,45 @@ function QuickTxModal({ empId, type, onSave, onClose }: {
   )
 }
 
+// ─── Bulk Status Modal ─────────────────────────────────────────────────────────────────────────────
+
+function BulkStatusModal({ count, onClose, onSave }: { count: number; onClose: () => void; onSave: (status: StatusKey) => void }) {
+  const [status, setStatus] = useState<StatusKey>('on-time')
+  return (
+    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]" dir="rtl" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[400px] p-6" onClick={e => e.stopPropagation()}>
+        <h3 className="font-cairo font-bold text-[16px] text-neutral-800 mb-2">تعديل الحالة مجمّعاً</h3>
+        <p className="font-cairo text-[13px] text-neutral-500 mb-6">سيتم تغيير حالة اليوم لـ {count} سجل/سجلات محددة.</p>
+        
+        <label className="block text-[12px] font-semibold text-neutral-600 mb-2">اختر الحالة الجديدة</label>
+        <div className="flex gap-2 flex-wrap mb-6">
+          {(['on-time', 'late', 'half-day', 'leave', 'absent'] as StatusKey[]).map(s => {
+            const cfg = STATUS_CFG[s]
+            return (
+              <button
+                key={s} type="button" onClick={() => setStatus(s)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-cairo text-[12px] font-semibold border transition-all ${
+                  status === s
+                    ? `${cfg.bg} ${cfg.color} border-current`
+                    : 'bg-white text-neutral-400 border-neutral-200 hover:bg-neutral-50'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                {cfg.label}
+              </button>
+            )
+          })}
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <button onClick={() => onSave(status)} className="flex-1 h-10 bg-[#1a6b3c] text-white rounded-lg font-cairo font-bold text-[13px] hover:bg-[#145730] transition-colors">تحديث</button>
+          <button onClick={onClose} className="px-5 h-10 border border-neutral-200 text-neutral-600 rounded-lg font-cairo font-bold text-[13px] hover:bg-neutral-50 transition-colors">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────────────────────
 
 export default function AttendancePage() {
@@ -396,6 +435,10 @@ export default function AttendancePage() {
   )
   // Quick transaction modal
   const [quickTx, setQuickTx] = useState<{ empId: string; type: TxType } | null>(null)
+
+  const [selectedEmpIds, setSelectedEmpIds] = useState<Set<string>>(new Set())
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set())
+  const [showBulkStatusModal, setShowBulkStatusModal] = useState(false)
 
   const todayDate = today()
 
@@ -423,6 +466,95 @@ export default function AttendancePage() {
   }, [records, search, filterStatus])
 
   const { page, setPage, totalPages, slice, total } = usePagination(filtered)
+
+  // ── Selected States updates ──
+  useEffect(() => { setSelectedRecordIds(new Set()) }, [page, search, filterStatus])
+
+  // ── Bulk Actions on Cards ──
+  function toggleEmpSelect(id: string) {
+    setSelectedEmpIds(prev => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  }
+
+  function handleBulkCheckIn() {
+    let count = 0
+    const time = nowTime()
+    const hour = parseInt(time.split(':')[0])
+    const isLate = hour >= 8
+    
+    setRecords(prev => {
+      const updated = [...prev]
+      selectedEmpIds.forEach(id => {
+        if (!updated.find(r => r.employeeId === id && r.date === todayDate)) {
+          updated.unshift({ id: genId(), employeeId: id, date: todayDate, checkIn: time, status: isLate ? 'late' : 'on-time' })
+          count++
+        }
+      })
+      return updated
+    })
+    
+    toast.success('تم تسجيل الحضور الجماعي بنجاح', { description: `تم حضور ${count} موظفين.` })
+    setSelectedEmpIds(new Set())
+  }
+
+  function handleBulkCheckOut() {
+    let count = 0
+    const time = nowTime()
+    setRecords(prev => {
+      const updated = [...prev]
+      selectedEmpIds.forEach(id => {
+        const idx = updated.findIndex(r => r.employeeId === id && r.date === todayDate && !r.checkOut)
+        if (idx !== -1) {
+          const r = updated[idx]
+          if (r.checkIn) {
+            const [ih, im] = r.checkIn.split(':').map(Number)
+            const [oh, om] = time.split(':').map(Number)
+            const dur = (oh * 60 + om) - (ih * 60 + im)
+            updated[idx] = { ...r, checkOut: time, duration: dur > 0 ? dur : 0 }
+          } else {
+            updated[idx] = { ...r, checkOut: time }
+          }
+          count++
+        }
+      })
+      return updated
+    })
+    
+    toast.success('تم تسجيل الانصراف الجماعي بنجاح', { description: `تم انصراف ${count} موظفين.` })
+    setSelectedEmpIds(new Set())
+  }
+
+  // ── Bulk Actions on Table ──
+  function toggleRecordSelect(id: string) {
+    setSelectedRecordIds(prev => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  }
+
+  function toggleSelectAllRecords() {
+    if (selectedRecordIds.size === slice.length && slice.length > 0) setSelectedRecordIds(new Set())
+    else setSelectedRecordIds(new Set(slice.map(r => r.id)))
+  }
+
+  function handleBulkRecordDelete() {
+    setRecords(prev => prev.filter(r => !selectedRecordIds.has(r.id)))
+    toast.success('تم حذف السجلات بنجاح', { description: `تم مسح ${selectedRecordIds.size} سجلات.` })
+    setSelectedRecordIds(new Set())
+  }
+
+  function handleBulkStatusSave(status: StatusKey) {
+    setRecords(prev => prev.map(r => selectedRecordIds.has(r.id) ? { ...r, status, leaveType: status==='leave'?'annual':undefined } : r))
+    toast.success('تم تعديل حالة السجلات بنجاح', { description: `تم تحديث ${selectedRecordIds.size} سجلات.` })
+    setShowBulkStatusModal(false)
+    setSelectedRecordIds(new Set())
+  }
 
   // ── Quick check-in ──
   function handleQuickCheckIn(employeeId: string) {
@@ -580,7 +712,16 @@ export default function AttendancePage() {
               <Clock size={16} className="text-[#1a6b3c]" />
               <h2 className="font-cairo font-bold text-[14px] text-neutral-800">تسجيل سريع — {fmtDate(todayDate)}</h2>
             </div>
-            <p className="font-cairo text-[11px] text-neutral-400">انقر على الأزرار للتسجيل السريع أو العمليات المالية</p>
+            {selectedEmpIds.size > 0 ? (
+              <div className="flex items-center gap-2">
+                <span className="font-cairo font-bold text-[12px] text-[#1a6b3c]">تم تحديد {selectedEmpIds.size}</span>
+                <button onClick={handleBulkCheckIn} className="px-3 py-1.5 bg-[#1a6b3c] text-white rounded-lg font-cairo text-[11px] font-semibold hover:bg-[#145730] transition-colors shadow-sm"><LogIn size={13} className="inline mr-1" /> حضور</button>
+                <button onClick={handleBulkCheckOut} className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-cairo text-[11px] font-semibold hover:bg-red-700 transition-colors shadow-sm"><LogOut size={13} className="inline mr-1" /> انصراف</button>
+                <button onClick={() => setSelectedEmpIds(new Set())} className="px-2 py-1.5 text-neutral-500 hover:text-neutral-700 font-cairo text-[11px] transition-colors"><X size={15}/></button>
+              </div>
+            ) : (
+              <p className="font-cairo text-[11px] text-neutral-400">انقر على البطاقة لتحديد موظفين</p>
+            )}
           </div>
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {employees.map(emp => {
@@ -591,10 +732,11 @@ export default function AttendancePage() {
               const leaveLeft  = leaveBalances[emp.id] ?? 0
 
               return (
-                <div key={emp.id} className="rounded-xl border border-neutral-100 bg-neutral-50 p-3 flex flex-col gap-2.5 hover:border-neutral-200 transition-colors">
+                <div key={emp.id} onClick={() => toggleEmpSelect(emp.id)} className={`rounded-xl border p-3 flex flex-col gap-2.5 transition-colors cursor-pointer ${selectedEmpIds.has(emp.id) ? 'bg-[#e8f5ee] border-[#1a6b3c]' : 'bg-neutral-50 border-neutral-100 hover:border-neutral-200'}`}>
                   {/* معلومات الموظف */}
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-[#e8f5ee] flex items-center justify-center shrink-0">
+                    <input type="checkbox" checked={selectedEmpIds.has(emp.id)} onChange={() => {}} className="w-4 h-4 rounded border-neutral-300 text-[#1a6b3c] focus:ring-[#1a6b3c] cursor-pointer" />
+                    <div className="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0">
                       <span className="font-cairo font-bold text-[13px] text-[#1a6b3c]">{emp.name.charAt(0)}</span>
                     </div>
                     <div className="min-w-0 flex-1">
@@ -620,7 +762,7 @@ export default function AttendancePage() {
                   )}
 
                   {/* أزرار الحضور */}
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={() => handleQuickCheckIn(emp.id)}
                       disabled={checkedIn}
@@ -648,7 +790,7 @@ export default function AttendancePage() {
                   </div>
 
                   {/* أزرار العمليات المالية */}
-                  <div className="grid grid-cols-4 gap-1">
+                  <div className="grid grid-cols-4 gap-1" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={() => setQuickTx({ empId: emp.id, type: 'advance' })}
                       className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-600 transition-colors"
@@ -732,10 +874,21 @@ export default function AttendancePage() {
 
         {/* ── Attendance Table ── */}
         <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+          {selectedRecordIds.size > 0 && (
+            <div className="bg-blue-50 border-b border-blue-100 px-5 py-3 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
+               <span className="font-cairo font-bold text-[13px] text-blue-800">تم تحديد {selectedRecordIds.size} سجلات</span>
+               <div className="flex items-center gap-2">
+                 <button onClick={() => setShowBulkStatusModal(true)} className="px-3 py-1.5 bg-white text-blue-700 border border-blue-200 rounded-lg font-cairo font-semibold text-[12px] hover:bg-blue-100 transition-colors shadow-sm">تعديل الحالة</button>
+                 <button onClick={handleBulkRecordDelete} className="px-3 py-1.5 bg-white text-red-600 border border-red-200 rounded-lg font-cairo font-semibold text-[12px] hover:bg-red-50 transition-colors shadow-sm">حذف السجلات</button>
+                 <button onClick={() => setSelectedRecordIds(new Set())} className="px-3 py-1.5 text-neutral-500 hover:text-neutral-700 font-cairo font-semibold text-[12px] transition-colors">إلغاء</button>
+               </div>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-neutral-50 border-b border-neutral-100">
+                  <th className="px-4 py-3 w-10 text-right"><input type="checkbox" checked={selectedRecordIds.size > 0 && selectedRecordIds.size === slice.length} onChange={toggleSelectAllRecords} className="w-4 h-4 rounded border-neutral-300 text-[#1a6b3c] focus:ring-[#1a6b3c] cursor-pointer" /></th>
                   {['رقم الموظف', 'الموظف', 'التاريخ', 'وقت الحضور', 'وقت الانصراف', 'عدد ساعات العمل', 'حالة اليوم', 'الرصيد المتبقي', 'ملاحظات', ''].map((h, i) => (
                     <th key={i} className={`px-4 py-3 font-cairo font-semibold text-[11px] text-neutral-500 whitespace-nowrap text-right ${i === 9 ? 'w-16' : ''}`}>
                       {h}
@@ -760,7 +913,8 @@ export default function AttendancePage() {
                   const statusCfg = STATUS_CFG[record.status as StatusKey] ?? STATUS_CFG['present']
                   const leaveLeft = leaveBalances[record.employeeId] ?? 0
                   return (
-                    <tr key={record.id} className="hover:bg-neutral-50/70 transition-colors">
+                    <tr key={record.id} onClick={() => toggleRecordSelect(record.id)} className={`transition-colors cursor-pointer ${selectedRecordIds.has(record.id) ? 'bg-[#e8f5ee]' : 'hover:bg-neutral-50/70'}`}>
+                      <td className="px-4 py-3.5"><input type="checkbox" checked={selectedRecordIds.has(record.id)} onChange={() => {}} className="w-4 h-4 rounded border-neutral-300 text-[#1a6b3c] focus:ring-[#1a6b3c] cursor-pointer" /></td>
                       {/* رقم الموظف */}
                       <td className="px-4 py-3.5">
                         <span className="font-cairo text-[11px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-md">
@@ -827,7 +981,7 @@ export default function AttendancePage() {
                         <span className="font-cairo text-[12px] text-neutral-500 truncate block">{record.notes || '—'}</span>
                       </td>
                       {/* Actions */}
-                      <td className="px-4 py-3.5">
+                      <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                         <button
                           onClick={() => setEditRecord(record)}
                           className="p-1.5 rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
