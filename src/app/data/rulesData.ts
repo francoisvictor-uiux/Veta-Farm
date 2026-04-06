@@ -15,6 +15,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   purchasing:  'مسئول مشتريات',
   accountant:  'محاسب',
   warehouse:   'مسئول مخزن',
+  sales:       'مسئول مبيعات',
 }
 
 export const ROLE_COLORS: Record<UserRole, string> = {
@@ -23,6 +24,7 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   purchasing:  'bg-orange-50 text-orange-700 border-orange-200',
   accountant:  'bg-amber-50 text-amber-700 border-amber-200',
   warehouse:   'bg-blue-50 text-blue-700 border-blue-200',
+  sales:       'bg-teal-50 text-teal-700 border-teal-200',
 }
 
 export const MODULE_OPTIONS = [

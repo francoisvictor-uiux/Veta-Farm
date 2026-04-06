@@ -1,4 +1,4 @@
-export type UserRole = 'manager' | 'veterinarian' | 'purchasing' | 'accountant' | 'warehouse'
+export type UserRole = 'manager' | 'veterinarian' | 'purchasing' | 'accountant' | 'warehouse' | 'sales'
 export type RuleStatus = 'active' | 'disabled'
 export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'approve' | 'export'
 
