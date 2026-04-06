@@ -18,7 +18,7 @@ type UserRole =
 
 type UserStatus = 'active' | 'inactive'
 
-interface SystemUser {
+export interface SystemUser {
   id: string
   name: string
   email: string
@@ -34,7 +34,7 @@ interface SystemUser {
 // Mock Data
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INITIAL_USERS: SystemUser[] = [
+export const INITIAL_USERS: SystemUser[] = [
   { id:'u1',  name:'أحمد محمود النجار',      email:'ahmed@negmfarm.com',    role:'manager',      status:'active',   lastLogin:'2026-03-30T09:15:00', createdAt:'2023-01-10', notes:'مدير النظام الرئيسي، صلاحيات كاملة',             avatar:'أ' },
   { id:'u2',  name:'فاطمة محمد البدوي',      email:'fatima@negmfarm.com',   role:'manager',      status:'active',   lastLogin:'2026-03-30T14:40:00', createdAt:'2023-01-15', notes:'مسؤولة عن الإدارة اليومية للمزرعة',              avatar:'ف' },
   { id:'u3',  name:'كريم عبدالله الشيخ',     email:'karim@negmfarm.com',    role:'veterinarian', status:'active',   lastLogin:'2026-03-29T11:22:00', createdAt:'2023-03-05', notes:'دكتور بيطري أول، رقابة كاملة على صحة الرؤوس',   avatar:'ك' },

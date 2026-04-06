@@ -12,10 +12,10 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type SupplierStatus = 'active' | 'inactive'
-type SupplierCategory = 'feed' | 'medicine' | 'equipment' | 'other'
+export type SupplierStatus = 'active' | 'inactive'
+export type SupplierCategory = 'feed' | 'medicine' | 'equipment' | 'other'
 
-interface Supplier {
+export interface Supplier {
   id: string
   name: string
   company: string
@@ -34,7 +34,7 @@ interface Supplier {
 // Mock Data
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INIT_SUPPLIERS: Supplier[] = [
+export const INIT_SUPPLIERS: Supplier[] = [
   { id:'s1',  name:'حسام محمود النجار',       company:'شركة النيل للأعلاف',               phone:'01001234567', email:'hossam@nile-feed.com',       address:'القاهرة، مدينة نصر، شارع عباس العقاد',             category:'feed',      balance:72500,  status:'active',   notes:'مورد رئيسي للأعلاف، يوفر خصماً 5% عند الدفع الفوري',  registeredAt:'2021-03-10', lastOrderDate:'2026-03-15' },
   { id:'s2',  name:'طارق رمضان حسين',         company:'مؤسسة الدلتا الطبية البيطرية',     phone:'01507654321', email:'tarek@delta-vet.com',         address:'الجيزة، المهندسين، شارع جامعة الدول العربية',       category:'medicine',  balance:41000,  status:'active',   notes:'متخصص في الأدوية واللقاحات البيطرية',                  registeredAt:'2021-06-20', lastOrderDate:'2026-02-28' },
   { id:'s3',  name:'كريم عبدالله الشيخ',      company:'الصعيد للمعدات الزراعية',          phone:'01209876543', email:'karim@saeed-agri.com',        address:'أسيوط، حي الوليدية، شارع النصر',                   category:'equipment', balance:160000, status:'active',   notes:'يوفر معدات الحلب والتبريد بضمان سنة',                  registeredAt:'2020-11-05', lastOrderDate:'2026-01-20' },
@@ -671,7 +671,7 @@ export default function SuppliersPage() {
                       </td>
                       {/* Actions */}
                       <td className="px-3 py-3.5">
-                        <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-0.5" onClick={e => e.stopPropagation()}>
                           <button
                             onClick={() => setViewSupplier(s)}
                             className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
@@ -735,10 +735,10 @@ export default function SuppliersPage() {
 
       {deleteSupplier && (
         <ConfirmDeleteModal
-          title="حذف المورد"
-          message={`هل أنت متأكد من حذف "${deleteSupplier.name}"؟ لا يمكن التراجع عن هذا الإجراء.`}
+          itemName={deleteSupplier.name}
+          itemType="المورد"
           onConfirm={handleDelete}
-          onCancel={() => setDeleteSupplier(null)}
+          onClose={() => setDeleteSupplier(null)}
         />
       )}
     </div>

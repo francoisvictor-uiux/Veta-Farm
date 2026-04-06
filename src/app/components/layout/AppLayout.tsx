@@ -48,20 +48,40 @@ function Header({ notifications, showNotif, showProfile, onToggleNotif, onToggle
       </div>
       <GlobalSearch className="hidden md:block w-64" />
       <div className="relative">
-        <button type="button" onClick={onToggleNotif} className={`relative w-9 h-9 flex items-center justify-center rounded-[10px] transition-colors ${showNotif ? 'bg-neutral-100 text-neutral-900' : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'}`}>
-          <Bell size={18} />
-          {unreadCount > 0 && <span className="absolute top-1 right-1 min-w-[16px] h-4 flex items-center justify-center bg-red-500 text-white font-cairo font-bold text-[9px] rounded-full px-1 leading-none">{unreadCount}</span>}
+        <button
+          type="button"
+          onClick={onToggleNotif}
+          aria-label={unreadCount > 0 ? `الإشعارات — ${unreadCount} غير مقروء` : 'الإشعارات'}
+          aria-expanded={showNotif}
+          aria-haspopup="true"
+          className={`relative w-9 h-9 flex items-center justify-center rounded-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${showNotif ? 'bg-neutral-100 text-neutral-900' : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'}`}
+        >
+          <Bell size={18} aria-hidden="true" />
+          {unreadCount > 0 && (
+            <span aria-hidden="true" className="absolute top-1 right-1 min-w-[16px] h-4 flex items-center justify-center bg-red-500 text-white font-cairo font-bold text-[9px] rounded-full px-1 leading-none">
+              {unreadCount}
+            </span>
+          )}
         </button>
         {showNotif && <NotificationPanel notifications={notifications} onMarkAllRead={onMarkAllRead} onMarkRead={onMarkRead} onClose={onToggleNotif} />}
       </div>
       <div className="relative">
-        <button type="button" onClick={onToggleProfile} className={`flex items-center gap-2 h-9 px-2.5 rounded-[10px] transition-colors ${showProfile ? 'bg-neutral-100' : 'hover:bg-neutral-100'}`}>
-          <div className="w-7 h-7 rounded-full bg-[#1a6b3c] flex items-center justify-center shrink-0 ring-2 ring-[#1a6b3c]/20"><span className="text-white font-cairo font-bold text-[11px]">أ</span></div>
+        <button
+          type="button"
+          onClick={onToggleProfile}
+          aria-label="قائمة الملف الشخصي"
+          aria-expanded={showProfile}
+          aria-haspopup="true"
+          className={`flex items-center gap-2 h-9 px-2.5 rounded-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${showProfile ? 'bg-neutral-100' : 'hover:bg-neutral-100'}`}
+        >
+          <div className="w-7 h-7 rounded-full bg-brand flex items-center justify-center shrink-0 ring-2 ring-brand/20" aria-hidden="true">
+            <span className="text-white font-cairo font-bold text-[11px]">أ</span>
+          </div>
           <div className="hidden md:flex flex-col items-end leading-tight">
             <span className="font-cairo font-semibold text-[12px] text-neutral-900">المدير العام</span>
             <span className="font-cairo text-[10px] text-neutral-400">مدير النظام</span>
           </div>
-          <ChevronDown size={13} className={`text-neutral-400 transition-transform duration-200 ${showProfile ? 'rotate-180' : ''}`} />
+          <ChevronDown size={13} aria-hidden="true" className={`text-neutral-400 transition-transform duration-200 ${showProfile ? 'rotate-180' : ''}`} />
         </button>
         {showProfile && <ProfileDropdown onClose={onToggleProfile} />}
       </div>
@@ -80,13 +100,19 @@ export function AppLayout() {
   function markRead(id: string) { setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n)) }
   return (
     <div className="h-screen flex overflow-hidden bg-neutral-100 font-cairo" dir="rtl">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-2 focus:z-[9999] focus:bg-brand focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-cairo focus:font-semibold"
+      >
+        تخطي إلى المحتوى الرئيسي
+      </a>
       <Toaster position="top-center" dir="rtl" toastOptions={{ style: { fontFamily: 'Cairo, sans-serif', fontSize: '13px' } }} />
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Header notifications={notifications} showNotif={showNotif} showProfile={showProfile}
           onToggleNotif={toggleNotif} onToggleProfile={toggleProfile}
           onMarkAllRead={markAllRead} onMarkRead={markRead} />
-        <main className="flex-1 overflow-y-auto"><Outlet /></main>
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto outline-none"><Outlet /></main>
       </div>
     </div>
   )

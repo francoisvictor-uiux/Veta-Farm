@@ -12,10 +12,10 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type CustomerStatus = 'active' | 'inactive'
-type CustomerType = 'individual' | 'company' | 'slaughterhouse' | 'distributor'
+export type CustomerStatus = 'active' | 'inactive'
+export type CustomerType = 'individual' | 'company' | 'slaughterhouse' | 'distributor'
 
-interface Customer {
+export interface Customer {
   id: string
   name: string
   company: string
@@ -34,7 +34,7 @@ interface Customer {
 // Mock Data
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INIT_CUSTOMERS: Customer[] = [
+export const INIT_CUSTOMERS: Customer[] = [
   { id:'c1',  name:'محمود سعيد عبده',         company:'مسلخ القاهرة الكبير',              phone:'01001234567', email:'mahmoud@cairo-slaught.com',    address:'القاهرة، الشرابية، المنطقة الصناعية الثانية',     type:'slaughterhouse', balance:142500, status:'active',   notes:'عميل منتظم، يشتري بالجملة كل أسبوعين',               registeredAt:'2021-05-12', lastOrderDate:'2026-03-18' },
   { id:'c2',  name:'كريم عاطف مرسي',          company:'شركة النيل للتوزيع الغذائي',       phone:'01507654321', email:'karim@nile-dist.com',           address:'الجيزة، الدقي، شارع التحرير',                     type:'distributor',    balance:76000,  status:'active',   notes:'موزع رئيسي في منطقة القاهرة الكبرى',                 registeredAt:'2021-08-20', lastOrderDate:'2026-03-10' },
   { id:'c3',  name:'أحمد حسن رزق',            company:'',                                 phone:'01209876543', email:'ahmed.r@gmail.com',            address:'القاهرة، عين شمس، شارع العباسية',                 type:'individual',     balance:24000,  status:'active',   notes:'يشتري عجول للمناسبات والمواسم',                       registeredAt:'2022-01-10', lastOrderDate:'2026-01-25' },
@@ -704,7 +704,7 @@ export default function CustomersPage() {
                       </td>
                       {/* Actions */}
                       <td className="px-3 py-3.5">
-                        <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-0.5" onClick={e => e.stopPropagation()}>
                           <button
                             onClick={() => setViewCustomer(c)}
                             className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
@@ -768,10 +768,10 @@ export default function CustomersPage() {
 
       {deleteCustomer && (
         <ConfirmDeleteModal
-          title="حذف العميل"
-          message={`هل أنت متأكد من حذف "${deleteCustomer.name}"؟ لا يمكن التراجع عن هذا الإجراء.`}
+          itemName={deleteCustomer.name}
+          itemType="العميل"
           onConfirm={handleDelete}
-          onCancel={() => setDeleteCustomer(null)}
+          onClose={() => setDeleteCustomer(null)}
         />
       )}
     </div>

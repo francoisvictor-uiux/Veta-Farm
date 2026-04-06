@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import {
-  Search, Plus, X, Download, Tag, Clock,
-  CheckCircle2, ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft,
-  Eye, CreditCard, Truck, FileText, AlertCircle,
-  TrendingUp, Wallet, ChevronDown, Scale,
+  Plus, Search, X, CheckCircle2, ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft,
+  AlertCircle, FileText, Download, ShieldCheck, Eye, CreditCard, Tag, TrendingUp, Bell,
+  Clock, Wallet, ShieldX, Truck, ChevronDown, Scale,
 } from 'lucide-react'
 import {
   SaleOrder, SaleItem, SalePayment, SaleStatus, SaleCategory,
@@ -12,6 +11,8 @@ import {
 } from '../types/sales'
 import { PAYMENT_METHOD_LABELS } from '../types/purchasing'
 import { saleOrders as initOrders, salePayments as initPayments } from '../data/salesData'
+import { INIT_CUSTOMERS } from './CustomersPage'
+import SearchableSelect from '../components/ui/SearchableSelect'
 
 function fmtMoney(n: number) { return n.toLocaleString('ar-EG') + ' ج.م' }
 function fmtDate(d: string)  { return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' }) }
@@ -29,6 +30,7 @@ function usePagination<T>(items: T[], pageSize = PAGE_SIZE) {
 }
 
 const STATUS_CFG: Record<SaleStatus, { label: string; color: string; bg: string; dot: string }> = {
+  awaiting_approval: { label: 'بانتظار الموافقة', color: 'text-purple-700', bg: 'bg-purple-50', dot: 'bg-purple-500 animate-pulse' },
   pending:   { label: 'معلق',  color: 'text-yellow-700', bg: 'bg-yellow-50', dot: 'bg-yellow-500' },
   confirmed: { label: 'مؤكد',  color: 'text-blue-700',   bg: 'bg-blue-50',   dot: 'bg-blue-500'   },
   delivered: { label: 'مسلّم', color: 'text-green-700',  bg: 'bg-green-50',  dot: 'bg-green-500'  },
@@ -141,8 +143,7 @@ function AddSaleModal({ onSave, onClose }: { onSave: (form: SaleForm) => void; o
 
   const addItem = () => setForm(f => ({ ...f, items: [...f.items, { name: '', category: 'cattle', quantity: 1, unit: 'رأس', unitPrice: 0, total: 0 }] }))
   const removeItem = (idx: number) => setForm(f => ({ ...f, items: f.items.filter((_, i) => i !== idx) }))
-  const grandTotal = form.items.reduce((s, it) => s + it.total, 0)
-  const valid = form.customerName.trim() !== '' && form.items.length > 0 && form.items.every(it => it.name.trim() !== '' && it.total > 0)
+  const valid = form.customerName.trim() !== '' && form.items.length > 0 && form.items.every(it => it.name.trim() !== '' && it.quantity > 0)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
@@ -158,7 +159,15 @@ function AddSaleModal({ onSave, onClose }: { onSave: (form: SaleForm) => void; o
         </div>
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="العميل" required><input value={form.customerName} onChange={e => set('customerName', e.target.value)} placeholder="اسم العميل..." className={inputCls} /></Field>
+            <Field label="العميل" required>
+              <SearchableSelect
+                value={form.customerName}
+                onChange={v => set('customerName', v)}
+                options={INIT_CUSTOMERS.map(c => ({ label: c.name, value: c.name }))}
+                placeholder="اختر العميل..."
+                className={inputCls}
+              />
+            </Field>
             <Field label="طريقة الدفع">
               <div className="relative">
                 <select value={form.paymentMethod} onChange={e => set('paymentMethod', e.target.value as PaymentMethod)} className={selectCls}>
@@ -185,7 +194,7 @@ function AddSaleModal({ onSave, onClose }: { onSave: (form: SaleForm) => void; o
                     <input value={item.name} onChange={e => setItem(idx, 'name', e.target.value)} placeholder="اسم الصنف أو المنتج..." className={inputCls} />
                     <button onClick={() => removeItem(idx)} disabled={form.items.length === 1} className="w-9 h-9 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 disabled:opacity-30 disabled:pointer-events-none"><X size={14} /></button>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <div className="relative">
                       <select value={item.category} onChange={e => setItem(idx, 'category', e.target.value as SaleCategory)} className={selectCls + ' text-[12px]'}>
                         {(Object.entries(SALE_CATEGORY_LABELS) as [SaleCategory, string][]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -199,19 +208,10 @@ function AddSaleModal({ onSave, onClose }: { onSave: (form: SaleForm) => void; o
                       </select>
                       <ChevronDown size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
                     </div>
-                    <input type="number" min="0" value={item.unitPrice} onChange={e => setItem(idx, 'unitPrice', parseFloat(e.target.value) || 0)} placeholder="السعر" className={inputCls + ' text-[12px]'} />
-                  </div>
-                  <div className="flex items-center justify-end gap-1">
-                    <span className="font-cairo text-[11px] text-neutral-400">الإجمالي:</span>
-                    <span className="font-cairo font-bold text-[13px] text-[#1a6b3c]">{fmtMoney(item.total)}</span>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-          <div className="rounded-xl bg-[#e8f5ee] border border-[#1a6b3c]/20 px-4 py-3 flex items-center justify-between">
-            <span className="font-cairo text-[13px] font-semibold text-[#1a6b3c]">إجمالي أمر البيع</span>
-            <span className="font-cairo font-bold text-[18px] text-[#1a6b3c]">{fmtMoney(grandTotal)}</span>
           </div>
           <Field label="ملاحظات">
             <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} placeholder="أي ملاحظات إضافية..." className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 font-cairo text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/30 focus:border-[#1a6b3c] transition resize-none" />
@@ -220,7 +220,75 @@ function AddSaleModal({ onSave, onClose }: { onSave: (form: SaleForm) => void; o
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-neutral-100 shrink-0">
           <button onClick={onClose} className="px-4 py-2 rounded-lg font-cairo text-[13px] font-semibold text-neutral-600 hover:bg-neutral-100">إلغاء</button>
           <button onClick={() => valid && onSave(form)} disabled={!valid} className="flex items-center gap-2 px-5 py-2 bg-[#1a6b3c] text-white rounded-lg font-cairo text-[13px] font-semibold hover:bg-[#145730] disabled:opacity-40 disabled:pointer-events-none">
-            <Plus size={14} /> حفظ أمر البيع
+            <Plus size={14} /> إرسال للموافقة
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ApproveSaleModal({ order, onApprove, onClose }: { order: SaleOrder; onApprove: (order: SaleOrder) => void; onClose: () => void }) {
+  const [items, setItems] = useState(order.items)
+
+  function setItemPrice(idx: number, price: number) {
+    setItems(prev => prev.map((it, i) => {
+      if (i !== idx) return it
+      const updated = { ...it, unitPrice: price }
+      updated.total = updated.quantity * updated.unitPrice
+      return updated
+    }))
+  }
+
+  const grandTotal = items.reduce((s, it) => s + it.total, 0)
+  const valid = items.every(it => it.total > 0)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[620px] max-h-[92vh] flex flex-col overflow-hidden">
+        <div className="h-1 w-full bg-gradient-to-l from-[#1a6b3c] to-[#2d9e5f] shrink-0" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#e8f5ee] flex items-center justify-center"><ShieldCheck size={15} className="text-[#1a6b3c]" /></div>
+            <div>
+              <h2 className="font-cairo font-bold text-[15px] text-neutral-800">موافقة المدير وتحديد الأسعار</h2>
+              <p className="font-cairo text-[11px] text-neutral-400">{order.customerName} · {order.orderNumber}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400"><X size={16} /></button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+          <p className="font-cairo text-[13px] text-neutral-600 mb-2">يرجى إدخال سعر الوحدة لكل صنف لإتمام الموافقة على أمر البيع:</p>
+          <div className="space-y-3">
+            {items.map((item, idx) => (
+              <div key={item.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 space-y-2">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-cairo font-semibold text-[13px] text-neutral-800">{item.name}</span>
+                  <span className="font-cairo text-[12px] text-neutral-600">{item.quantity} {item.unit}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="سعر الوحدة (ج.م) *">
+                    <input type="number" min="0" value={item.unitPrice || ''} onChange={e => setItemPrice(idx, parseFloat(e.target.value) || 0)} placeholder="حدد السعر..." className={inputCls} autoFocus={idx===0} />
+                  </Field>
+                  <Field label="الإجمالي">
+                    <div className="h-9 px-3 rounded-lg border border-neutral-200 bg-neutral-100 flex items-center font-cairo font-bold text-[13px] text-[#1a6b3c]">
+                      {fmtMoney(item.total)}
+                    </div>
+                  </Field>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-xl bg-[#e8f5ee] border border-[#1a6b3c]/20 px-4 py-3 flex items-center justify-between">
+            <span className="font-cairo text-[13px] font-semibold text-[#1a6b3c]">إجمالي أمر البيع النهائي</span>
+            <span className="font-cairo font-bold text-[18px] text-[#1a6b3c]">{fmtMoney(grandTotal)}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-neutral-100 shrink-0">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg font-cairo text-[13px] font-semibold text-neutral-600 hover:bg-neutral-100">إلغاء</button>
+          <button onClick={() => valid && onApprove({ ...order, items, totalAmount: grandTotal, status: 'confirmed' })} disabled={!valid} className="flex items-center gap-2 px-5 py-2 bg-[#1a6b3c] text-white rounded-lg font-cairo text-[13px] font-semibold hover:bg-[#145730] disabled:opacity-40 disabled:pointer-events-none">
+            <CheckCircle2 size={14} /> موافقة وتأكيد
           </button>
         </div>
       </div>
@@ -387,8 +455,8 @@ function ViewSaleModal({ order, payments, onClose }: { order: SaleOrder; payment
   )
 }
 
-const ALL_STATUSES: (SaleStatus | 'all')[] = ['all', 'pending', 'confirmed', 'partial', 'delivered', 'cancelled']
-const FILTER_LABELS: Record<string, string> = { all: 'الكل', pending: 'معلق', confirmed: 'مؤكد', partial: 'جزئي', delivered: 'مسلّم', cancelled: 'ملغي' }
+const ALL_STATUSES: (SaleStatus | 'all')[] = ['all', 'awaiting_approval', 'pending', 'confirmed', 'partial', 'delivered', 'cancelled']
+const FILTER_LABELS: Record<string, string> = { all: 'الكل', awaiting_approval: 'بانتظار الموافقة', pending: 'معلق', confirmed: 'مؤكد', partial: 'جزئي', delivered: 'مسلّم', cancelled: 'ملغي' }
 
 export default function SalesPage() {
   const [orders, setOrders]     = useState<SaleOrder[]>(initOrders)
@@ -398,13 +466,15 @@ export default function SalesPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [collectOrder, setCollectOrder] = useState<SaleOrder | null>(null)
   const [viewOrder, setViewOrder]       = useState<SaleOrder | null>(null)
+  const [approveOrder, setApproveOrder] = useState<SaleOrder | null>(null)
 
   const stats = useMemo(() => {
     const active    = orders.filter(o => o.status !== 'cancelled')
     const pending   = orders.filter(o => o.status === 'pending' || o.status === 'confirmed')
+    const awaitingApproval = orders.filter(o => o.status === 'awaiting_approval')
     const collected = active.reduce((s, o) => s + o.collectedAmount, 0)
     const balance   = active.reduce((s, o) => s + (o.totalAmount - o.collectedAmount), 0)
-    return { count: active.length, pending: pending.length, collected, balance }
+    return { count: active.length, pending: pending.length, awaitingApproval: awaitingApproval.length, collected, balance }
   }, [orders])
 
   const filtered = useMemo(() => {
@@ -420,16 +490,15 @@ export default function SalesPage() {
 
   function handleAddSale(form: SaleForm) {
     const items = form.items.map(it => ({ ...it, id: genId('item') }))
-    const totalAmount = items.reduce((s, it) => s + it.total, 0)
     const newOrder: SaleOrder = {
       id: genId('so'), orderNumber: `SO-2026-${String(orders.length + 1).padStart(3, '0')}`,
       customerName: form.customerName, date: form.date, deliveryDate: form.deliveryDate || undefined,
       paymentMethod: form.paymentMethod as PaymentMethod || undefined,
-      notes: form.notes || undefined, items, totalAmount, collectedAmount: 0, status: 'pending',
+      notes: form.notes || undefined, items, totalAmount: 0, collectedAmount: 0, status: 'awaiting_approval',
     }
     setOrders(prev => [newOrder, ...prev])
     setShowAddModal(false)
-    toast.success('تم إنشاء أمر البيع', { description: `${newOrder.orderNumber} · ${fmtMoney(totalAmount)} · ${form.customerName}` })
+    toast.success('تم إرسال طلب البيع للمدير بنجاح', { description: `${newOrder.orderNumber} · ${form.customerName} — بانتظار المدير لتحديد السعر والموافقة` })
   }
 
   function handleCollect(payment: SalePayment) {
@@ -452,6 +521,21 @@ export default function SalesPage() {
   function handleConfirm(order: SaleOrder) {
     setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'confirmed' } : o))
     toast.success(`تم تأكيد ${order.orderNumber}`)
+  }
+
+  function handleApprove(order: SaleOrder) {
+    setApproveOrder(order)
+  }
+
+  function handleConfirmApprove(updatedOrder: SaleOrder) {
+    setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o))
+    setApproveOrder(null)
+    toast.success(`تم الموافقة على ${updatedOrder.orderNumber} وتأكيد الأسعار`, { description: `${updatedOrder.customerName} — ${fmtMoney(updatedOrder.totalAmount)}` })
+  }
+
+  function handleReject(order: SaleOrder) {
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o))
+    toast.error(`تم رفض ${order.orderNumber}`, { description: `${order.customerName} — لم تتم الموافقة على سعر البيع` })
   }
 
   function handleCancel(order: SaleOrder) {
@@ -477,8 +561,14 @@ export default function SalesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard icon={Tag} label="إجمالي الأوامر" value={String(stats.count)} color="primary" />
+          <div className="relative">
+            <StatCard icon={Bell} label="بانتظار موافقة المدير" value={String(stats.awaitingApproval)} color={stats.awaitingApproval > 0 ? 'warning' : 'neutral'} />
+            {stats.awaitingApproval > 0 && (
+              <span className="absolute -top-1 -left-1 w-5 h-5 flex items-center justify-center rounded-full bg-purple-500 text-white text-[10px] font-bold animate-bounce shadow-lg">{stats.awaitingApproval}</span>
+            )}
+          </div>
           <StatCard icon={Clock} label="أوامر قيد التنفيذ" value={String(stats.pending)} color="warning" />
           <StatCard icon={TrendingUp} label="إجمالي التحصيلات" value={fmtMoney(stats.collected)} color="success" />
           <StatCard icon={Wallet} label="المبالغ المستحقة" value={fmtMoney(stats.balance)} color={stats.balance > 0 ? 'error' : 'neutral'} />
@@ -492,13 +582,17 @@ export default function SalesPage() {
                 className="w-full h-9 rounded-lg border border-neutral-200 bg-neutral-50 pr-9 pl-3 font-cairo text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/30 focus:border-[#1a6b3c] transition" />
               {search && <button onClick={() => setSearch('')} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"><X size={13} /></button>}
             </div>
-            <div className="flex items-center gap-1 bg-neutral-100 rounded-xl p-1">
-              {ALL_STATUSES.map(s => (
-                <button key={s} onClick={() => { setFilterStatus(s); setPage(1) }}
-                  className={`px-3 py-1.5 rounded-lg font-cairo text-[12px] font-semibold transition-all ${filterStatus === s ? 'bg-white text-neutral-800 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}>
-                  {FILTER_LABELS[s]}
-                </button>
-              ))}
+            <div className="relative shrink-0 w-[160px]">
+              <select 
+                value={filterStatus} 
+                onChange={e => { setFilterStatus(e.target.value as any); setPage(1) }}
+                className="w-full h-9 rounded-lg border border-neutral-200 bg-white px-3 font-cairo text-[12px] font-semibold text-neutral-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/30 focus:border-[#1a6b3c] transition appearance-none"
+              >
+                {ALL_STATUSES.map(s => (
+                  <option key={s} value={s}>{FILTER_LABELS[s]}</option>
+                ))}
+              </select>
+              <ChevronDown size={13} className="absolute inset-inline-end-auto inset-inline-start-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -547,7 +641,13 @@ export default function SalesPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button onClick={() => setViewOrder(order)} title="عرض التفاصيل" className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-[#1a6b3c] hover:bg-[#e8f5ee] transition-colors"><Eye size={14} /></button>
-                          {order.status !== 'delivered' && order.status !== 'cancelled' && remaining > 0 && (
+                          {order.status === 'awaiting_approval' && (
+                            <>
+                              <button onClick={() => handleApprove(order)} title="موافقة المدير" className="w-7 h-7 flex items-center justify-center rounded-lg text-purple-400 hover:text-green-600 hover:bg-green-50 transition-all hover:scale-110"><ShieldCheck size={15} /></button>
+                              <button onClick={() => handleReject(order)} title="رفض الطلب" className="w-7 h-7 flex items-center justify-center rounded-lg text-purple-400 hover:text-red-600 hover:bg-red-50 transition-all hover:scale-110"><ShieldX size={15} /></button>
+                            </>
+                          )}
+                          {order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'awaiting_approval' && remaining > 0 && (
                             <button onClick={() => setCollectOrder(order)} title="تحصيل دفعة" className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-colors"><CreditCard size={14} /></button>
                           )}
                           {order.status === 'pending' && (
@@ -571,6 +671,7 @@ export default function SalesPage() {
         </div>
       </div>
       {showAddModal  && <AddSaleModal onSave={handleAddSale} onClose={() => setShowAddModal(false)} />}
+      {approveOrder  && <ApproveSaleModal order={approveOrder} onApprove={handleConfirmApprove} onClose={() => setApproveOrder(null)} />}
       {collectOrder  && <CollectModal order={collectOrder} onSave={handleCollect} onClose={() => setCollectOrder(null)} />}
       {viewOrder     && <ViewSaleModal order={viewOrder} payments={payments} onClose={() => setViewOrder(null)} />}
     </div>

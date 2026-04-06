@@ -71,47 +71,58 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {collapsed ? (
         <div className="h-[64px] flex items-center justify-center border-b border-neutral-200 shrink-0">
-          <button type="button" onClick={onToggle} title="توسيع القائمة" className="w-9 h-9 rounded-[10px] bg-[#1a6b3c] flex items-center justify-center hover:opacity-90 transition-opacity">
+          <button type="button" onClick={onToggle} aria-label="توسيع القائمة" title="توسيع القائمة" className="w-9 h-9 rounded-[10px] bg-brand flex items-center justify-center hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
             <LogoIcon />
           </button>
         </div>
       ) : (
         <div className="h-[64px] flex items-center justify-between px-3 border-b border-neutral-200 shrink-0">
           <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-            <div className="w-8 h-8 rounded-[8px] bg-[#1a6b3c] flex items-center justify-center shrink-0"><LogoIcon /></div>
+            <div className="w-8 h-8 rounded-[8px] bg-brand flex items-center justify-center shrink-0" aria-hidden="true"><LogoIcon /></div>
             <div className="flex flex-col leading-tight overflow-hidden">
               <span className="text-neutral-900 font-bold text-[15px] whitespace-nowrap font-cairo">نجم فارم</span>
               <span className="text-neutral-500 text-[10px] whitespace-nowrap font-cairo">نظام إدارة محطات التسمين</span>
             </div>
           </div>
-          <button type="button" onClick={onToggle} title="طي القائمة" className="shrink-0 w-7 h-7 flex items-center justify-center rounded-[7px] text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200 transition-all duration-150">
-            <PanelRightClose size={15} />
+          <button type="button" onClick={onToggle} aria-label="طي القائمة" title="طي القائمة" className="shrink-0 w-7 h-7 flex items-center justify-center rounded-[7px] text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <PanelRightClose size={15} aria-hidden="true" />
           </button>
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
+      <nav aria-label="القائمة الرئيسية" className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
         {NAV_GROUPS.map((group, gi) => (
           <div key={gi} className={gi > 0 ? 'mt-1' : ''}>
             {group.label && !collapsed && (
-              <button type="button" onClick={() => toggleGroup(group.label!)} className="w-full flex items-center justify-between px-2 py-1.5 rounded-[7px] text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors">
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.label!)}
+                aria-expanded={openGroups[group.label] !== false}
+                aria-controls={`nav-group-${gi}`}
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded-[7px] text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <span className="text-[10px] font-semibold uppercase tracking-widest font-cairo">{group.label}</span>
-                {openGroups[group.label] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                {openGroups[group.label] ? <ChevronUp size={10} aria-hidden="true" /> : <ChevronDown size={10} aria-hidden="true" />}
               </button>
             )}
-            {group.label && collapsed && gi > 0 && <div className="mx-2 my-1.5 h-px bg-neutral-200" />}
+            {group.label && collapsed && gi > 0 && <div className="mx-2 my-1.5 h-px bg-neutral-200" role="separator" />}
             {(group.label ? openGroups[group.label] !== false || collapsed : true) && (
-              <ul className="space-y-0.5">
+              <ul id={group.label ? `nav-group-${gi}` : undefined} className="space-y-0.5">
                 {group.items.map(item => {
                   const active = isActive(item.path)
                   const Icon = item.icon
                   return (
                     <li key={item.path}>
-                      <button type="button" onClick={() => navigate(item.path)} title={item.label}
-                        className={['w-full flex items-center gap-2.5 rounded-[8px] transition-all duration-150 py-2', collapsed ? 'justify-center px-1.5' : 'px-2.5', active ? 'bg-[#1a6b3c] text-white shadow-sm' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'].join(' ')}>
-                        <Icon size={16} className="shrink-0" />
+                      <button
+                        type="button"
+                        onClick={() => navigate(item.path)}
+                        title={collapsed ? item.label : undefined}
+                        aria-current={active ? 'page' : undefined}
+                        className={['w-full flex items-center gap-2.5 rounded-[8px] transition-all duration-150 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', collapsed ? 'justify-center px-1.5' : 'px-2.5', active ? 'bg-brand text-white shadow-sm' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'].join(' ')}
+                      >
+                        <Icon size={16} className="shrink-0" aria-hidden="true" />
                         {!collapsed && <span className="text-[13px] font-semibold text-start flex-1 truncate font-cairo">{item.label}</span>}
-                        {!collapsed && item.badge && item.badge > 0 && <span className="ms-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{item.badge}</span>}
+                        {!collapsed && item.badge && item.badge > 0 && <span aria-label={`${item.badge} إشعارات`} className="ms-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{item.badge}</span>}
                       </button>
                     </li>
                   )
@@ -123,9 +134,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </nav>
 
       <div className="border-t border-neutral-200 p-2 shrink-0">
-        <button type="button" onClick={() => navigate('/login')} title="تسجيل الخروج"
-          className={['w-full flex items-center gap-2.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-all rounded-[8px] py-2', collapsed ? 'justify-center px-1.5' : 'px-2.5'].join(' ')}>
-          <LogOut size={16} className="shrink-0" />
+        <button
+          type="button"
+          onClick={() => navigate('/login')}
+          title={collapsed ? 'تسجيل الخروج' : undefined}
+          aria-label="تسجيل الخروج"
+          className={['w-full flex items-center gap-2.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-all rounded-[8px] py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', collapsed ? 'justify-center px-1.5' : 'px-2.5'].join(' ')}
+        >
+          <LogOut size={16} className="shrink-0" aria-hidden="true" />
           {!collapsed && <span className="text-[13px] font-semibold font-cairo">تسجيل الخروج</span>}
         </button>
       </div>

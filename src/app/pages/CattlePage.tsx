@@ -32,6 +32,9 @@ interface Cattle {
   type: CattleType
   breed: string | null
   entryDate: string
+  supplierName?: string
+  supplierInvoice?: string
+  weighbridgeCard?: string
   purchasePrice: number
   sellingPrice?: number
   saleDate?: string
@@ -172,11 +175,17 @@ interface HeadFormState {
   tag: string
   vehicleNumber: string
   weighbridgePhoto: File | null
+  supplierName: string
+  supplierInvoice: string
+  entryDate: string
+  weighbridgeCard: string
+  notes: string
 }
 
 function emptyHeadForm(): HeadFormState {
   return {
-    batchId: '', type: '', count: '1', totalWeight: '', purchasePrice: '', breed: '', tag: '', vehicleNumber: '', weighbridgePhoto: null
+    batchId: '', type: '', count: '1', totalWeight: '', purchasePrice: '', breed: '', tag: '', vehicleNumber: '', weighbridgePhoto: null,
+    supplierName: '', supplierInvoice: '', entryDate: new Date().toISOString().split('T')[0], weighbridgeCard: '', notes: ''
   }
 }
 
@@ -328,7 +337,9 @@ function HeadsTab({ cattle, batches, onAdd, onEdit, onDelete }: {
         <HeadFormModal batches={batches} initial={{
           batchId: editCattle.batchId, type: editCattle.type, count: '1',
           totalWeight: String(editCattle.avgWeight), purchasePrice: String(editCattle.purchasePrice), breed: editCattle.breed || '',
-          tag: editCattle.tag || '', vehicleNumber: editCattle.vehicleNumber || '', weighbridgePhoto: null
+          tag: editCattle.tag || '', vehicleNumber: editCattle.vehicleNumber || '', weighbridgePhoto: null,
+          supplierName: editCattle.supplierName || '', supplierInvoice: editCattle.supplierInvoice || '', entryDate: editCattle.entryDate,
+          weighbridgeCard: editCattle.weighbridgeCard || '', notes: editCattle.notes || ''
         }} isEdit={true}
           onSave={d => { onEdit(editCattle.id, d); setEditCattle(null) }}
           onClose={() => setEditCattle(null)} />
@@ -468,22 +479,57 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={lbl}>رقم السيارة <span className="text-neutral-400 font-normal lowercase">(اختياري)</span></label>
+                <label className={lbl}>التاريخ</label>
                 <div className="relative">
-                  <Truck size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-                  <input type="text" value={form.vehicleNumber} onChange={e => setForm({ ...form, vehicleNumber: e.target.value })}
-                    className={`${inp} pe-10`} placeholder="أ ب ج 123" />
+                  <CalendarDays size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                  <input type="date" value={form.entryDate} onChange={e => setForm({ ...form, entryDate: e.target.value })}
+                    className={`${inp} pe-10`} dir="ltr" />
                 </div>
               </div>
               <div>
-                <label className={lbl}>صورة كارتة الميزان <span className="text-neutral-400 font-normal lowercase">(اختياري)</span></label>
+                <label className={lbl}>المورد <span className="text-neutral-400 font-normal lowercase">(اختياري)</span></label>
                 <div className="relative">
-                  <input type="file" id="wb-photo" className="hidden" />
-                  <label htmlFor="wb-photo" className={`flex items-center justify-between w-full h-9 px-3 rounded-[10px] border border-neutral-200 bg-white cursor-pointer hover:border-primary-400 transition-colors`}>
-                    <span className="font-cairo text-[12px] text-neutral-400">إرفاق صورة الكارتة</span>
-                    <Camera size={14} className="text-neutral-400" />
+                  <Type size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                  <input type="text" value={form.supplierName} onChange={e => setForm({ ...form, supplierName: e.target.value })}
+                    className={`${inp} pe-10`} placeholder="اسم المورد..." />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={lbl}>رقم فاتورة المورد <span className="text-neutral-400 font-normal lowercase">(اختياري)</span></label>
+                <div className="relative">
+                  <ScanLine size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                  <input type="text" value={form.supplierInvoice} onChange={e => setForm({ ...form, supplierInvoice: e.target.value })}
+                    className={`${inp} pe-10`} placeholder="INV-XXXX" dir="ltr" />
+                </div>
+              </div>
+              <div>
+                <label className={lbl}>كارتة الميزان / رقم السيارة <span className="text-neutral-400 font-normal lowercase">(اختياري)</span></label>
+                <div className="relative">
+                  <Scale size={14} className="absolute inset-inline-end-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                  <input type="text" value={form.weighbridgeCard} onChange={e => setForm({ ...form, weighbridgeCard: e.target.value })}
+                    className={`${inp} pe-10`} placeholder="WB-XXXX / أ ب ج 123" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={lbl}>صورة المرفق / الميزان <span className="text-neutral-400 font-normal lowercase">(اختياري)</span></label>
+                <div className="relative">
+                  <input type="file" id="wb-photo" className="hidden" onChange={e => setForm({...form, weighbridgePhoto: e.target.files?.[0] || null})} />
+                  <label htmlFor="wb-photo" className={`flex items-center justify-between w-full h-9 px-3 rounded-[10px] border border-neutral-200 bg-neutral-50 cursor-pointer hover:border-primary-400 transition-colors`}>
+                    <span className="font-cairo text-[12px] text-neutral-500 truncate max-w-[85%]">{form.weighbridgePhoto ? form.weighbridgePhoto.name : 'إرفاق صورة أو مستند'}</span>
+                    <Camera size={14} className="text-neutral-400 shrink-0" />
                   </label>
                 </div>
+              </div>
+              <div>
+                <label className={lbl}>ملاحظات <span className="text-neutral-400 font-normal lowercase">(اختياري)</span></label>
+                <input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
+                  className={`${inp}`} placeholder="أي ملاحظات إضافية..." />
               </div>
             </div>
 
@@ -1099,7 +1145,7 @@ function BatchesTab({ batches, cattle, onAdd, onEdit, onDelete }: {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function CattlePage() {
-  const [activeTab, setActiveTab] = useState<'heads' | 'batches'>('heads')
+  const [activeTab, setActiveTab] = useState<'heads' | 'batches'>('batches')
   const [cattle, setCattle] = useState<Cattle[]>(INIT_CATTLE)
   const [batches, setBatches] = useState<Batch[]>(INIT_BATCHES)
 
@@ -1130,8 +1176,12 @@ export default function CattlePage() {
       breed: form.breed || null,
       tag: form.tag ? (count > 1 ? `${form.tag}-${i+1}` : form.tag) : null,
       vehicleNumber: form.vehicleNumber || null,
+      supplierName: form.supplierName || undefined,
+      supplierInvoice: form.supplierInvoice || undefined,
+      weighbridgeCard: form.weighbridgeCard || undefined,
+      notes: form.notes || undefined,
       weighbridgePhoto: form.weighbridgePhoto?.name || null,
-      entryDate: new Date().toISOString().split('T')[0],
+      entryDate: form.entryDate || new Date().toISOString().split('T')[0],
       status: 'active',
     }))
     setCattle(prev => [...newItems, ...prev])
@@ -1143,6 +1193,10 @@ export default function CattlePage() {
       purchasePrice: parseFloat(data.purchasePrice),
       avgWeight: parseFloat(data.totalWeight), breed: data.breed || null,
       tag: data.tag || null, vehicleNumber: data.vehicleNumber || null,
+      supplierName: data.supplierName || undefined,
+      supplierInvoice: data.supplierInvoice || undefined,
+      weighbridgeCard: data.weighbridgeCard || undefined,
+      notes: data.notes || undefined, entryDate: data.entryDate
     } : c))
   }
 
@@ -1162,11 +1216,11 @@ export default function CattlePage() {
 
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-neutral-200">
-          <button onClick={() => setActiveTab('heads')} className={`px-5 py-3 font-cairo font-bold text-[14px] leading-tight transition-all border-b-[3px] ${activeTab === 'heads' ? 'text-primary-600 border-primary-600' : 'text-neutral-500 border-transparent hover:text-neutral-700 hover:border-neutral-300'}`}>
-            سجل الرؤوس
-          </button>
           <button onClick={() => setActiveTab('batches')} className={`px-5 py-3 font-cairo font-bold text-[14px] leading-tight transition-all border-b-[3px] ${activeTab === 'batches' ? 'text-primary-600 border-primary-600' : 'text-neutral-500 border-transparent hover:text-neutral-700 hover:border-neutral-300'}`}>
             الدورات
+          </button>
+          <button onClick={() => setActiveTab('heads')} className={`px-5 py-3 font-cairo font-bold text-[14px] leading-tight transition-all border-b-[3px] ${activeTab === 'heads' ? 'text-primary-600 border-primary-600' : 'text-neutral-500 border-transparent hover:text-neutral-700 hover:border-neutral-300'}`}>
+            سجل الرؤوس
           </button>
         </div>
 

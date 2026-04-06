@@ -12,6 +12,8 @@ import {
   PURCHASE_STATUS_LABELS, PAYMENT_METHOD_LABELS, PURCHASE_CATEGORY_LABELS,
 } from '../types/purchasing'
 import { purchaseOrders as initOrders, purchasePayments as initPayments } from '../data/purchasingData'
+import { INIT_SUPPLIERS } from './SuppliersPage'
+import SearchableSelect from '../components/ui/SearchableSelect'
 
 function fmtMoney(n: number) { return n.toLocaleString('ar-EG') + ' ج.م' }
 function fmtDate(d: string)  { return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' }) }
@@ -120,11 +122,11 @@ const UNITS = ['طن', 'كيلو', 'لتر', 'عبوة', 'رأس', 'قطعة', '
 
 interface OrderForm {
   supplierName: string; date: string; expectedDate: string; invoiceNumber: string
-  paymentMethod: PaymentMethod | ''; notes: string; items: Omit<PurchaseItem, 'id'>[]
+  paymentMethod: PaymentMethod | ''; notes: string; invoiceImage?: string | null; items: Omit<PurchaseItem, 'id'>[]
 }
 
 function emptyOrderForm(): OrderForm {
-  return { supplierName: '', date: todayStr(), expectedDate: '', invoiceNumber: '', paymentMethod: '', notes: '',
+  return { supplierName: '', date: todayStr(), expectedDate: '', invoiceNumber: '', paymentMethod: '', notes: '', invoiceImage: null,
     items: [{ name: '', category: 'feed', quantity: 1, unit: 'طن', unitPrice: 0, total: 0 }] }
 }
 
@@ -163,22 +165,41 @@ function AddOrderModal({ onSave, onClose }: { onSave: (form: OrderForm) => void;
         </div>
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="المورد" required><input value={form.supplierName} onChange={e => set('supplierName', e.target.value)} placeholder="اسم المورد..." className={inputCls} /></Field>
+            <Field label="المورد" required>
+              <SearchableSelect
+                value={form.supplierName}
+                onChange={v => set('supplierName', v)}
+                options={INIT_SUPPLIERS.map(s => ({ label: s.name, value: s.name }))}
+                placeholder="اختر المورد..."
+                className={inputCls}
+              />
+            </Field>
             <Field label="رقم الفاتورة"><input value={form.invoiceNumber} onChange={e => set('invoiceNumber', e.target.value)} placeholder="INV-..." className={inputCls} /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="تاريخ الطلب"><input type="date" value={form.date} onChange={e => set('date', e.target.value)} className={inputCls} /></Field>
             <Field label="التاريخ المتوقع للاستلام"><input type="date" value={form.expectedDate} onChange={e => set('expectedDate', e.target.value)} className={inputCls} /></Field>
           </div>
-          <Field label="طريقة الدفع">
-            <div className="relative">
-              <select value={form.paymentMethod} onChange={e => set('paymentMethod', e.target.value as PaymentMethod)} className={selectCls}>
-                <option value="">اختر...</option>
-                {(Object.entries(PAYMENT_METHOD_LABELS) as [PaymentMethod, string][]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-              <ChevronDown size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
-            </div>
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="طريقة الدفع">
+              <div className="relative">
+                <select value={form.paymentMethod} onChange={e => set('paymentMethod', e.target.value as PaymentMethod)} className={selectCls}>
+                  <option value="">اختر...</option>
+                  {(Object.entries(PAYMENT_METHOD_LABELS) as [PaymentMethod, string][]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+                <ChevronDown size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+              </div>
+            </Field>
+            <Field label="صورة الفاتورة (اختياري)">
+              <div className="flex items-center gap-2">
+                <input type="file" accept="image/*" onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (file) set('invoiceImage', URL.createObjectURL(file))
+                }} className="w-full text-[12px] text-neutral-500 file:ml-2 file:py-1.5 file:px-3 file:rounded-[8px] file:border-0 file:text-[11px] file:font-semibold file:bg-[#e8f5ee] file:text-[#1a6b3c] hover:file:bg-[#d4eddf] cursor-pointer" />
+                {form.invoiceImage && <img src={form.invoiceImage} alt="فاتورة" className="h-9 w-12 rounded object-cover cursor-pointer hover:opacity-80" onClick={() => window.open(form.invoiceImage!)} />}
+              </div>
+            </Field>
+          </div>
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="font-cairo text-[12px] font-semibold text-neutral-600">الأصناف <span className="text-red-500">*</span></label>
@@ -331,6 +352,14 @@ function ViewOrderModal({ order, payments, onClose }: { order: PurchaseOrder; pa
             {order.expectedDate && <div className="flex items-center justify-between border-b border-neutral-100 pb-1.5"><span className="font-cairo text-[12px] text-neutral-400">موعد الاستلام</span><span className="font-cairo font-semibold text-[12px] text-neutral-700">{fmtDate(order.expectedDate)}</span></div>}
             {order.receivedDate && <div className="flex items-center justify-between border-b border-neutral-100 pb-1.5"><span className="font-cairo text-[12px] text-neutral-400">تاريخ الاستلام</span><span className="font-cairo font-semibold text-[12px] text-green-600">{fmtDate(order.receivedDate)}</span></div>}
           </div>
+          {order.invoiceImage && (
+            <div>
+              <h3 className="font-cairo font-bold text-[13px] text-neutral-700 mb-2">صورة الفاتورة المرفقة</h3>
+              <a href={order.invoiceImage} target="_blank" rel="noreferrer">
+                <img src={order.invoiceImage} alt="فاتورة" className="rounded-xl w-full max-h-[300px] object-cover border border-neutral-200 hover:opacity-90 transition-opacity" />
+              </a>
+            </div>
+          )}
           <div>
             <h3 className="font-cairo font-bold text-[13px] text-neutral-700 mb-2">الأصناف</h3>
             <div className="rounded-xl overflow-hidden border border-neutral-100">
@@ -428,7 +457,7 @@ export default function PurchasingPage() {
       id: genId('po'), orderNumber: `PO-2026-${String(orders.length + 1).padStart(3, '0')}`,
       supplierName: form.supplierName, date: form.date, expectedDate: form.expectedDate || undefined,
       invoiceNumber: form.invoiceNumber || undefined, paymentMethod: form.paymentMethod as PaymentMethod || undefined,
-      notes: form.notes || undefined, items, totalAmount, paidAmount: 0, status: 'pending',
+      notes: form.notes || undefined, invoiceImage: form.invoiceImage || undefined, items, totalAmount, paidAmount: 0, status: 'pending',
     }
     setOrders(prev => [newOrder, ...prev])
     setShowAddModal(false)
@@ -490,13 +519,17 @@ export default function PurchasingPage() {
                 className="w-full h-9 rounded-lg border border-neutral-200 bg-neutral-50 pr-9 pl-3 font-cairo text-[13px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/30 focus:border-[#1a6b3c] transition" />
               {search && <button onClick={() => setSearch('')} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"><X size={13} /></button>}
             </div>
-            <div className="flex items-center gap-1 bg-neutral-100 rounded-xl p-1">
-              {ALL_STATUSES.map(s => (
-                <button key={s} onClick={() => { setFilterStatus(s); setPage(1) }}
-                  className={`px-3 py-1.5 rounded-lg font-cairo text-[12px] font-semibold transition-all ${filterStatus === s ? 'bg-white text-neutral-800 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}>
-                  {FILTER_LABELS[s]}
-                </button>
-              ))}
+            <div className="relative shrink-0 w-[160px]">
+              <select 
+                value={filterStatus} 
+                onChange={e => { setFilterStatus(e.target.value as any); setPage(1) }}
+                className="w-full h-9 rounded-lg border border-neutral-200 bg-white px-3 font-cairo text-[12px] font-semibold text-neutral-700 focus:outline-none focus:ring-2 focus:ring-[#1a6b3c]/30 focus:border-[#1a6b3c] transition appearance-none"
+              >
+                {ALL_STATUSES.map(s => (
+                  <option key={s} value={s}>{FILTER_LABELS[s]}</option>
+                ))}
+              </select>
+              <ChevronDown size={13} className="absolute inset-inline-end-auto inset-inline-start-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
             </div>
           </div>
           <div className="overflow-x-auto">

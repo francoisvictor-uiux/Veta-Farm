@@ -1,10 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm install:*)",
-      "Bash(npm install:*)",
-      "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "mcp__plugin_figma_figma__get_metadata"
     ]
   }
 }

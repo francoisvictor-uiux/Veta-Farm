@@ -1,10 +1,11 @@
 import type { PaymentMethod } from './purchasing'
 export type { PaymentMethod }
 
-export type SaleStatus   = 'pending' | 'confirmed' | 'delivered' | 'partial' | 'cancelled'
+export type SaleStatus   = 'awaiting_approval' | 'pending' | 'confirmed' | 'delivered' | 'partial' | 'cancelled'
 export type SaleCategory = 'cattle' | 'meat' | 'byproduct' | 'other'
 
 export const SALE_STATUS_LABELS: Record<SaleStatus, string> = {
+  awaiting_approval: 'بانتظار الموافقة',
   pending:   'معلق',
   confirmed: 'مؤكد',
   delivered: 'مسلّم',

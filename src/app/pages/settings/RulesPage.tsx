@@ -14,6 +14,7 @@ import {
   MODULE_OPTIONS,
   ALL_PERMISSION_ACTIONS,
 } from '../../data/rulesData'
+import { INITIAL_USERS } from './UsersPage'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -78,10 +79,38 @@ function RolePills({ roles }: { roles: UserRole[] }) {
   return (
     <div className="flex flex-wrap gap-1">
       {roles.map(r => (
-        <span key={r} className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-cairo font-semibold ${ROLE_COLORS[r]}`}>
+        <span key={r} className={`inline-flex items-center px-1.5 py-0.5 rounded-full border text-[10px] font-cairo font-semibold ${ROLE_COLORS[r]}`}>
           {ROLE_LABELS[r]}
         </span>
       ))}
+    </div>
+  )
+}
+
+// ─── Users Count Tooltip ───────────────────────────────────────────────────────
+
+function UsersCount({ roles }: { roles: UserRole[] }) {
+  const usersWithRole = INITIAL_USERS.filter(u => roles.includes(u.role))
+  const count = usersWithRole.length
+  
+  return (
+    <div className="relative group inline-flex items-center justify-center">
+      <span className="inline-flex items-center justify-center min-w-[26px] h-[26px] rounded-full bg-blue-50 text-blue-600 font-bold text-[12px] border border-blue-100 cursor-help transition-colors group-hover:bg-blue-100">
+        {count}
+      </span>
+      {count > 0 && (
+        <div className="absolute top-1/2 -translate-y-1/2 right-full mr-2 w-max max-w-[200px] bg-neutral-900 text-white rounded-[8px] p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[99] shadow-xl pointer-events-none before:content-[''] before:absolute before:top-1/2 before:-translate-y-1/2 before:-right-1.5 before:border-4 before:border-transparent before:border-l-neutral-900 flex flex-col gap-1.5">
+          <p className="font-cairo text-[11px] text-neutral-300 font-bold text-start border-b border-neutral-700 pb-1 mb-0.5">مستخدمي الصلاحية ({count})</p>
+          <ul className="text-[11px] font-cairo text-start flex flex-col gap-1">
+            {usersWithRole.map(u => (
+              <li key={u.id} className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                {u.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
@@ -695,11 +724,11 @@ export default function RulesPage() {
         </div>
 
         {/* ── Table ── */}
-        <div className="bg-white border border-neutral-200 rounded-[12px] overflow-hidden">
+        <div className="bg-white border border-neutral-200 rounded-[12px] overflow-visible">
 
           {/* Table header */}
-          <div className="hidden md:grid grid-cols-[minmax(180px,2fr)_110px_140px_minmax(160px,2fr)_120px_100px] items-center px-5 py-2.5 border-b border-neutral-100 bg-neutral-50">
-            {['اسم القاعدة', 'الحالة', 'الأدوار', 'الصلاحيات', 'آخر تعديل', 'إجراءات'].map(h => (
+          <div className="hidden md:grid grid-cols-[minmax(160px,2fr)_80px_140px_80px_minmax(140px,2fr)_100px_100px] items-center px-5 py-2.5 border-b border-neutral-100 bg-neutral-50 rounded-t-[12px]">
+            {['اسم القاعدة', 'الحالة', 'الأدوار', 'المستخدمين', 'الصلاحيات', 'آخر تعديل', 'إجراءات'].map(h => (
               <span key={h} className="font-semibold text-[10.5px] text-neutral-400 uppercase tracking-widest whitespace-nowrap">
                 {h}
               </span>
@@ -716,8 +745,8 @@ export default function RulesPage() {
                 <li
                   key={rule.id}
                   className={[
-                    'flex flex-col md:grid md:grid-cols-[minmax(180px,2fr)_110px_140px_minmax(160px,2fr)_120px_100px] items-start md:items-center px-5 py-3.5 transition-colors hover:bg-neutral-50/80 cursor-pointer',
-                    i < filtered.length - 1 ? 'border-b border-neutral-100' : '',
+                    'flex flex-col md:grid md:grid-cols-[minmax(160px,2fr)_80px_140px_80px_minmax(140px,2fr)_100px_100px] items-start md:items-center px-5 py-3.5 transition-colors hover:bg-neutral-50/80 cursor-pointer',
+                    i < filtered.length - 1 ? 'border-b border-neutral-100' : 'rounded-b-[12px]',
                   ].join(' ')}
                   onClick={() => setDetailRule(rule)}
                 >
@@ -732,6 +761,9 @@ export default function RulesPage() {
 
                   {/* Roles */}
                   <div><RolePills roles={rule.roles} /></div>
+
+                  {/* Users */}
+                  <div><UsersCount roles={rule.roles} /></div>
 
                   {/* Actions */}
                   <div className="pe-3"><ActionPills actions={rule.allowedActions} /></div>

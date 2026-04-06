@@ -48,6 +48,7 @@ export interface PurchaseOrder {
   status: PurchaseStatus
   paymentMethod?: PaymentMethod
   invoiceNumber?: string
+  invoiceImage?: string | null
   notes?: string
 }
 
