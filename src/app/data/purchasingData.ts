@@ -1,25 +1,27 @@
 import { PurchaseOrder, PurchasePayment } from '../types/purchasing'
 
-export const suppliers = [
-  'شركة السلام للأعلاف',
-  'الشركة العربية للأعلاف',
-  'مزرعة النيل للأدوية البيطرية',
-  'مصنع الفرسان للمعدات',
-  'شركة الخليج للمواشي',
-]
+// Supplier company names — must match SuppliersPage INIT_SUPPLIERS company field
+// s1  → شركة النيل للأعلاف          (feed)
+// s2  → مؤسسة الدلتا الطبية البيطرية  (medicine)
+// s3  → الصعيد للمعدات الزراعية      (equipment)
+// s4  → مزارع الشرقية للأعلاف        (feed)
+// s6  → شركة السادات للتجهيزات الزراعية (equipment)
+// s7  → شركة الجندي للأدوية البيطرية  (medicine)
+// s8  → مؤسسة الفيوم للأعلاف المركزة  (feed)
+// s13 → شركة الخليج للمواشي          (other/cattle)
 
 export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-1',
     orderNumber: 'PO-2026-001',
-    supplierName: 'شركة السلام للأعلاف',
+    supplierName: 'شركة النيل للأعلاف',
     date: '2026-03-01',
     expectedDate: '2026-03-05',
     receivedDate: '2026-03-04',
     invoiceNumber: 'INV-4521',
     items: [
-      { id: 'i1', name: 'ذرة صفراء', category: 'feed', quantity: 25, unit: 'طن', unitPrice: 2800, total: 70000 },
-      { id: 'i2', name: 'ردة قمح',   category: 'feed', quantity: 10, unit: 'طن', unitPrice: 1250, total: 12500 },
+      { id: 'i1', name: 'ذرة صفراء', category: 'feed', quantity: 25, unit: 'طن',  unitPrice: 2800, total: 70000 },
+      { id: 'i2', name: 'ردة قمح',   category: 'feed', quantity: 10, unit: 'طن',  unitPrice: 1250, total: 12500 },
     ],
     totalAmount: 82500,
     paidAmount:  82500,
@@ -29,15 +31,15 @@ export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-2',
     orderNumber: 'PO-2026-002',
-    supplierName: 'مزرعة النيل للأدوية البيطرية',
+    supplierName: 'مؤسسة الدلتا الطبية البيطرية',
     date: '2026-03-05',
     expectedDate: '2026-03-08',
     receivedDate: '2026-03-08',
     invoiceNumber: 'INV-8812',
     items: [
-      { id: 'i3', name: 'لقاح الحمى القلاعية',  category: 'medicine', quantity: 200, unit: 'جرعة', unitPrice: 28,  total: 5600  },
-      { id: 'i4', name: 'فيتامينات مركبة (AD3E)', category: 'medicine', quantity: 50,  unit: 'عبوة',  unitPrice: 95,  total: 4750  },
-      { id: 'i5', name: 'مضادات حيوية أوكسيتتراسيكلين', category: 'medicine', quantity: 30, unit: 'عبوة', unitPrice: 145, total: 4350 },
+      { id: 'i3', name: 'لقاح الحمى القلاعية',         category: 'medicine', quantity: 200, unit: 'جرعة', unitPrice: 28,  total: 5600 },
+      { id: 'i4', name: 'فيتامينات مركبة (AD3E)',       category: 'medicine', quantity: 50,  unit: 'عبوة', unitPrice: 95,  total: 4750 },
+      { id: 'i5', name: 'مضادات حيوية أوكسيتتراسيكلين', category: 'medicine', quantity: 30,  unit: 'عبوة', unitPrice: 145, total: 4350 },
     ],
     totalAmount: 14700,
     paidAmount:  10000,
@@ -48,7 +50,7 @@ export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-3',
     orderNumber: 'PO-2026-003',
-    supplierName: 'مصنع الفرسان للمعدات',
+    supplierName: 'الصعيد للمعدات الزراعية',
     date: '2026-03-10',
     expectedDate: '2026-03-20',
     items: [
@@ -80,13 +82,13 @@ export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-5',
     orderNumber: 'PO-2026-005',
-    supplierName: 'الشركة العربية للأعلاف',
+    supplierName: 'مزارع الشرقية للأعلاف',
     date: '2026-03-14',
     expectedDate: '2026-03-18',
     receivedDate: '2026-03-17',
-    invoiceNumber: 'INV-ARB-1190',
+    invoiceNumber: 'INV-SHQ-1190',
     items: [
-      { id: 'i9',  name: 'دريس برسيم', category: 'feed', quantity: 50, unit: 'طن', unitPrice: 1500, total: 75000 },
+      { id: 'i9', name: 'دريس برسيم', category: 'feed', quantity: 50, unit: 'طن', unitPrice: 1500, total: 75000 },
     ],
     totalAmount: 75000,
     paidAmount:  75000,
@@ -96,14 +98,14 @@ export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-6',
     orderNumber: 'PO-2026-006',
-    supplierName: 'مزرعة النيل للأدوية البيطرية',
+    supplierName: 'شركة الجندي للأدوية البيطرية',
     date: '2026-03-18',
     expectedDate: '2026-03-21',
     receivedDate: '2026-03-21',
-    invoiceNumber: 'INV-9051',
+    invoiceNumber: 'INV-JND-9051',
     items: [
-      { id: 'i10', name: 'مطهر فيركون',    category: 'medicine', quantity: 20, unit: 'كيلو', unitPrice: 180, total: 3600 },
-      { id: 'i11', name: 'هرمون نمو RAC',  category: 'medicine', quantity: 15, unit: 'عبوة', unitPrice: 320, total: 4800 },
+      { id: 'i10', name: 'مطهر فيركون',   category: 'medicine', quantity: 20, unit: 'كيلو', unitPrice: 180, total: 3600 },
+      { id: 'i11', name: 'هرمون نمو RAC', category: 'medicine', quantity: 15, unit: 'عبوة', unitPrice: 320, total: 4800 },
     ],
     totalAmount: 8400,
     paidAmount:  8400,
@@ -113,11 +115,11 @@ export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-7',
     orderNumber: 'PO-2026-007',
-    supplierName: 'شركة السلام للأعلاف',
+    supplierName: 'شركة النيل للأعلاف',
     date: '2026-03-20',
     expectedDate: '2026-03-25',
     items: [
-      { id: 'i12', name: 'كسبة فول صويا',  category: 'feed', quantity: 15, unit: 'طن', unitPrice: 4500, total: 67500 },
+      { id: 'i12', name: 'كسبة فول صويا', category: 'feed', quantity: 15, unit: 'طن', unitPrice: 4500, total: 67500 },
     ],
     totalAmount: 67500,
     paidAmount:  30000,
@@ -128,13 +130,13 @@ export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-8',
     orderNumber: 'PO-2026-008',
-    supplierName: 'مصنع الفرسان للمعدات',
+    supplierName: 'شركة السادات للتجهيزات الزراعية',
     date: '2026-03-22',
     expectedDate: '2026-04-01',
-    invoiceNumber: 'INV-FR-0567',
+    invoiceNumber: 'INV-SDT-0567',
     items: [
-      { id: 'i13', name: 'مضخة مياه 3 HP',       category: 'equipment', quantity: 1, unit: 'قطعة', unitPrice: 12500, total: 12500 },
-      { id: 'i14', name: 'خراطيم ري (100م)',       category: 'equipment', quantity: 2, unit: 'رول',   unitPrice: 3000,  total: 6000  },
+      { id: 'i13', name: 'مضخة مياه 3 HP',   category: 'equipment', quantity: 1, unit: 'قطعة', unitPrice: 12500, total: 12500 },
+      { id: 'i14', name: 'خراطيم ري (100م)', category: 'equipment', quantity: 2, unit: 'رول',   unitPrice: 3000,  total: 6000  },
     ],
     totalAmount: 18500,
     paidAmount:  0,
@@ -160,13 +162,13 @@ export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-10',
     orderNumber: 'PO-2026-010',
-    supplierName: 'الشركة العربية للأعلاف',
+    supplierName: 'مؤسسة الفيوم للأعلاف المركزة',
     date: '2026-03-26',
     expectedDate: '2026-03-30',
     items: [
-      { id: 'i16', name: 'ذرة صفراء',  category: 'feed', quantity: 10, unit: 'طن', unitPrice: 2800, total: 28000 },
-      { id: 'i17', name: 'برسيم جاف',  category: 'feed', quantity: 5,  unit: 'طن', unitPrice: 1800, total: 9000  },
-      { id: 'i18', name: 'سيلاج ذرة',  category: 'feed', quantity: 8,  unit: 'طن', unitPrice: 500,  total: 4000  },
+      { id: 'i16', name: 'ذرة صفراء', category: 'feed', quantity: 10, unit: 'طن', unitPrice: 2800, total: 28000 },
+      { id: 'i17', name: 'برسيم جاف', category: 'feed', quantity: 5,  unit: 'طن', unitPrice: 1800, total: 9000  },
+      { id: 'i18', name: 'سيلاج ذرة', category: 'feed', quantity: 8,  unit: 'طن', unitPrice: 500,  total: 4000  },
     ],
     totalAmount: 41000,
     paidAmount:  0,
@@ -176,13 +178,13 @@ export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-11',
     orderNumber: 'PO-2026-011',
-    supplierName: 'مزرعة النيل للأدوية البيطرية',
+    supplierName: 'مؤسسة الدلتا الطبية البيطرية',
     date: '2026-03-28',
     expectedDate: '2026-04-02',
     items: [
-      { id: 'i19', name: 'فيتامين E + سيلينيوم', category: 'medicine', quantity: 40, unit: 'عبوة', unitPrice: 220, total: 8800  },
-      { id: 'i20', name: 'مكمل معادن',            category: 'medicine', quantity: 25, unit: 'كيلو', unitPrice: 280, total: 7000  },
-      { id: 'i21', name: 'لقاح الجدري',            category: 'medicine', quantity: 150, unit: 'جرعة',unitPrice: 45,  total: 6750  },
+      { id: 'i19', name: 'فيتامين E + سيلينيوم', category: 'medicine', quantity: 40,  unit: 'عبوة', unitPrice: 220, total: 8800 },
+      { id: 'i20', name: 'مكمل معادن',            category: 'medicine', quantity: 25,  unit: 'كيلو', unitPrice: 280, total: 7000 },
+      { id: 'i21', name: 'لقاح الجدري',            category: 'medicine', quantity: 150, unit: 'جرعة', unitPrice: 45,  total: 6750 },
     ],
     totalAmount: 22550,
     paidAmount:  15000,
@@ -192,10 +194,10 @@ export const purchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-12',
     orderNumber: 'PO-2026-012',
-    supplierName: 'شركة السلام للأعلاف',
+    supplierName: 'مزارع الشرقية للأعلاف',
     date: '2026-02-15',
     expectedDate: '2026-02-20',
-    invoiceNumber: 'INV-3988',
+    invoiceNumber: 'INV-SHQ-3988',
     items: [
       { id: 'i22', name: 'ردة قمح مستوردة', category: 'feed', quantity: 20, unit: 'طن', unitPrice: 1800, total: 36000 },
     ],
@@ -204,15 +206,66 @@ export const purchaseOrders: PurchaseOrder[] = [
     status: 'cancelled',
     notes: 'ملغي — الجودة لا تطابق المواصفات المطلوبة',
   },
+  {
+    id: 'po-13',
+    orderNumber: 'PO-2026-013',
+    supplierName: 'شركة النيل للأعلاف',
+    date: '2026-04-01',
+    expectedDate: '2026-04-06',
+    items: [
+      { id: 'i23', name: 'ذرة صفراء',  category: 'feed', quantity: 20, unit: 'طن', unitPrice: 2900, total: 58000 },
+      { id: 'i24', name: 'كسبة سمسم', category: 'feed', quantity: 8,  unit: 'طن', unitPrice: 3200, total: 25600 },
+    ],
+    totalAmount: 83600,
+    paidAmount:  40000,
+    status: 'approved',
+    paymentMethod: 'bank',
+    notes: 'دفعة مقدم 40,000 — الباقي عند التسليم',
+  },
+  {
+    id: 'po-14',
+    orderNumber: 'PO-2026-014',
+    supplierName: 'الصعيد للمعدات الزراعية',
+    date: '2026-04-03',
+    expectedDate: '2026-04-10',
+    items: [
+      { id: 'i25', name: 'سخان مياه للحظائر', category: 'equipment', quantity: 3, unit: 'قطعة', unitPrice: 4800, total: 14400 },
+      { id: 'i26', name: 'مراوح تهوية صناعية', category: 'equipment', quantity: 4, unit: 'قطعة', unitPrice: 3500, total: 14000 },
+    ],
+    totalAmount: 28400,
+    paidAmount:  0,
+    status: 'pending',
+    paymentMethod: 'transfer',
+  },
+  {
+    id: 'po-15',
+    orderNumber: 'PO-2026-015',
+    supplierName: 'شركة الجندي للأدوية البيطرية',
+    date: '2026-04-05',
+    expectedDate: '2026-04-08',
+    receivedDate: '2026-04-08',
+    invoiceNumber: 'INV-JND-9220',
+    items: [
+      { id: 'i27', name: 'لقاح برووسيلا',    category: 'medicine', quantity: 100, unit: 'جرعة', unitPrice: 55,  total: 5500 },
+      { id: 'i28', name: 'مضاد طفيليات',     category: 'medicine', quantity: 40,  unit: 'عبوة', unitPrice: 120, total: 4800 },
+      { id: 'i29', name: 'محلول ملحي معقم',   category: 'medicine', quantity: 20,  unit: 'زجاجة', unitPrice: 35, total: 700  },
+    ],
+    totalAmount: 11000,
+    paidAmount:  11000,
+    status: 'received',
+    paymentMethod: 'cash',
+  },
 ]
 
 export const purchasePayments: PurchasePayment[] = [
-  { id: 'pp-1', orderId: 'po-1',  date: '2026-03-04', amount: 82500, method: 'bank',  notes: 'تحويل بنكي كامل' },
-  { id: 'pp-2', orderId: 'po-2',  date: '2026-03-08', amount: 10000, method: 'cash',  notes: 'دفعة أولى نقداً' },
-  { id: 'pp-3', orderId: 'po-4',  date: '2026-03-15', amount: 280000, method: 'bank', notes: 'تحويل بنكي فور الاستلام' },
-  { id: 'pp-4', orderId: 'po-5',  date: '2026-03-17', amount: 75000, method: 'check', notes: 'شيك مؤجل 30 يوم' },
-  { id: 'pp-5', orderId: 'po-6',  date: '2026-03-21', amount: 8400,  method: 'cash',  notes: 'نقدي' },
-  { id: 'pp-6', orderId: 'po-7',  date: '2026-03-20', amount: 30000, method: 'transfer', notes: 'دفعة مقدم' },
-  { id: 'pp-7', orderId: 'po-9',  date: '2026-03-27', amount: 120000, method: 'bank', notes: 'تحويل بنكي' },
-  { id: 'pp-8', orderId: 'po-11', date: '2026-03-28', amount: 15000, method: 'cash',  notes: 'دفعة أولى' },
+  { id: 'pp-1',  orderId: 'po-1',  date: '2026-03-04', amount: 82500,  method: 'bank',     notes: 'تحويل بنكي كامل' },
+  { id: 'pp-2',  orderId: 'po-2',  date: '2026-03-08', amount: 10000,  method: 'cash',     notes: 'دفعة أولى نقداً' },
+  { id: 'pp-3',  orderId: 'po-4',  date: '2026-03-15', amount: 280000, method: 'bank',     notes: 'تحويل بنكي فور الاستلام' },
+  { id: 'pp-4',  orderId: 'po-5',  date: '2026-03-17', amount: 75000,  method: 'check',    notes: 'شيك مؤجل 30 يوم' },
+  { id: 'pp-5',  orderId: 'po-6',  date: '2026-03-21', amount: 8400,   method: 'cash',     notes: 'نقدي' },
+  { id: 'pp-6',  orderId: 'po-7',  date: '2026-03-20', amount: 30000,  method: 'transfer', notes: 'دفعة مقدم' },
+  { id: 'pp-7',  orderId: 'po-9',  date: '2026-03-27', amount: 120000, method: 'bank',     notes: 'تحويل بنكي' },
+  { id: 'pp-8',  orderId: 'po-11', date: '2026-03-28', amount: 15000,  method: 'cash',     notes: 'دفعة أولى' },
+  { id: 'pp-9',  orderId: 'po-13', date: '2026-04-01', amount: 40000,  method: 'bank',     notes: 'دفعة مقدم تحويل' },
+  { id: 'pp-10', orderId: 'po-15', date: '2026-04-08', amount: 11000,  method: 'cash',     notes: 'نقدي كامل فور الاستلام' },
 ]

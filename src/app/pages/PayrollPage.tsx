@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { toast } from 'sonner'
 import {
   Search, X, Plus, Download, Filter,
@@ -7,8 +8,26 @@ import {
   Edit2, Banknote, TrendingUp, Users, Eye, Check,
   ShieldCheck, Receipt, CreditCard, Star, Calendar, ChevronDown,
 } from 'lucide-react'
-import { payrollEmployees, payrollRecords as initRecords } from '../data/payrollData'
-import { PayrollRecord, PayrollStatus } from '../types/payroll'
+import { payrollRecords as initRecords } from '../data/payrollData'
+import { PayrollRecord, PayrollEmployee, PayrollStatus } from '../types/payroll'
+import { INITIAL_EMPLOYEES } from './EmployeesPage'
+import { readLocalStorage, DB_KEYS } from '../hooks/useLocalStorage'
+
+// Map HR employee (EmployeesPage) → PayrollEmployee
+function mapHR(e: typeof INITIAL_EMPLOYEES[0]): PayrollEmployee {
+  return {
+    id:             e.id,
+    employeeNumber: e.id,
+    name:           e.name,
+    jobTitle:       e.jobTitle,
+    department:     e.department,
+    baseSalary:     e.basicSalary,
+    insurance:      e.insurance,
+    taxes:          e.taxes,
+    annualLeave:    21,
+    startDate:      e.workStart || '2020-01-01',
+  }
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────────────────
 
@@ -151,11 +170,12 @@ function calcNet(f: PayrollForm): number {
   )
 }
 
-function PayrollModal({ initial, isEdit, onSave, onClose }: {
+function PayrollModal({ initial, isEdit, onSave, onClose, payrollEmployees }: {
   initial: PayrollForm
   isEdit: boolean
   onSave: (data: PayrollForm) => void
   onClose: () => void
+  payrollEmployees: PayrollEmployee[]
 }) {
   const [form, setForm] = useState<PayrollForm>(initial)
   const [showExtra, setShowExtra] = useState(false)
@@ -352,10 +372,11 @@ function PayrollModal({ initial, isEdit, onSave, onClose }: {
 
 // ─── Detail Modal ──────────────────────────────────────────────────────────────────────────────
 
-function DetailModal({ record, onClose, onMarkPaid }: {
+function DetailModal({ record, onClose, onMarkPaid, payrollEmployees }: {
   record: PayrollRecord
   onClose: () => void
   onMarkPaid: (id: string) => void
+  payrollEmployees: PayrollEmployee[]
 }) {
   const emp = payrollEmployees.find(e => e.id === record.employeeId)
   const cfg = STATUS_CFG[record.status]
@@ -487,7 +508,14 @@ function DetailModal({ record, onClose, onMarkPaid }: {
 // ─── Main Page ───────────────────────────────────────────────────────────────────────────────
 
 export default function PayrollPage() {
-  const [records, setRecords] = useState<PayrollRecord[]>(initRecords)
+  // ── Live employees — reads from EmployeesPage localStorage, falls back to seed data
+  const payrollEmployees: PayrollEmployee[] = useMemo(() =>
+    readLocalStorage<typeof INITIAL_EMPLOYEES>(DB_KEYS.employees, INITIAL_EMPLOYEES)
+      .filter(e => e.status !== 'inactive')
+      .map(mapHR)
+  , [])
+
+  const [records, setRecords] = useLocalStorage<PayrollRecord[]>('vetafarm_payroll_records', initRecords)
   const [selectedMonth, setSelectedMonth] = useState(currentMonth())
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<PayrollStatus | 'all'>('all')
@@ -926,13 +954,13 @@ export default function PayrollPage() {
       </div>
 
       {showModal && (
-        <PayrollModal initial={emptyForm()} isEdit={false} onSave={handleAdd} onClose={() => setShowModal(false)} />
+        <PayrollModal initial={emptyForm()} isEdit={false} onSave={handleAdd} onClose={() => setShowModal(false)} payrollEmployees={payrollEmployees} />
       )}
       {editRecord && (
-        <PayrollModal initial={editInitial(editRecord)} isEdit onSave={handleEdit} onClose={() => setEditRecord(null)} />
+        <PayrollModal initial={editInitial(editRecord)} isEdit onSave={handleEdit} onClose={() => setEditRecord(null)} payrollEmployees={payrollEmployees} />
       )}
       {viewRecord && (
-        <DetailModal record={viewRecord} onClose={() => setViewRecord(null)} onMarkPaid={handleMarkPaid} />
+        <DetailModal record={viewRecord} onClose={() => setViewRecord(null)} onMarkPaid={handleMarkPaid} payrollEmployees={payrollEmployees} />
       )}
     </div>
   )

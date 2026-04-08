@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { toast } from 'sonner'
 import {
   Search, X, Plus, Clock, Users, UserCheck, UserX, AlertCircle,
@@ -6,8 +7,25 @@ import {
   ChevronsRight, ChevronsLeft, Filter, Download,
   CreditCard, Star, Minus, ChevronDown, BadgeInfo, ShieldAlert,
 } from 'lucide-react'
-import { employees, attendanceRecords as initRecords } from '../data/attendanceData'
-import { AttendanceRecord, LeaveType, LEAVE_TYPE_LABELS, QuickTransaction } from '../types/attendance'
+import { attendanceRecords as initRecords } from '../data/attendanceData'
+import { AttendanceRecord, Employee as AttEmployee, LeaveType, LEAVE_TYPE_LABELS, QuickTransaction } from '../types/attendance'
+import { INITIAL_EMPLOYEES } from './EmployeesPage'
+import { readLocalStorage, DB_KEYS } from '../hooks/useLocalStorage'
+
+// Map HR employee (EmployeesPage) → AttEmployee (attendance module)
+function mapHR(e: typeof INITIAL_EMPLOYEES[0]): AttEmployee {
+  return {
+    id:             e.id,
+    employeeNumber: e.id.replace('e', 'EMP-').padStart(7, '0'),
+    name:           e.name,
+    jobTitle:       e.jobTitle,
+    department:     e.department,
+    startDate:      e.workStart || '2020-01-01',
+    annualLeave:    21,
+    usedLeave:      0,
+    isActive:       e.status !== 'inactive',
+  }
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────────────────
 
@@ -134,11 +152,12 @@ function emptyManualForm(): ManualForm {
   }
 }
 
-function ManualModal({ initial, isEdit, onSave, onClose }: {
+function ManualModal({ initial, isEdit, onSave, onClose, employees }: {
   initial: ManualForm
   isEdit: boolean
   onSave: (data: ManualForm) => void
   onClose: () => void
+  employees: AttEmployee[]
 }) {
   const [form, setForm] = useState<ManualForm>(initial)
   const set = <K extends keyof ManualForm>(k: K, v: ManualForm[K]) => setForm(f => ({ ...f, [k]: v }))
@@ -307,11 +326,12 @@ const TX_CFG: Record<TxType, { label: string; icon: React.ElementType; color: st
   'deduction':      { label: 'تطبيق خصم',      icon: Minus,      color: 'text-red-700',    bg: 'bg-red-50',    placeholder: 'مبلغ الخصم...' },
 }
 
-function QuickTxModal({ empId, type, onSave, onClose }: {
+function QuickTxModal({ empId, type, onSave, onClose, employees }: {
   empId: string
   type: TxType
   onSave: (tx: QuickTransaction) => void
   onClose: () => void
+  employees: AttEmployee[]
 }) {
   const emp = employees.find(e => e.id === empId)
   const cfg = TX_CFG[type]
@@ -424,14 +444,22 @@ function BulkStatusModal({ count, onClose, onSave }: { count: number; onClose: (
 // ─── Main Page ───────────────────────────────────────────────────────────────────────────────
 
 export default function AttendancePage() {
-  const [records, setRecords] = useState<AttendanceRecord[]>(initRecords)
+  // ── Live employees — reads from EmployeesPage localStorage, falls back to seed data
+  const employees: AttEmployee[] = useMemo(() =>
+    readLocalStorage<typeof INITIAL_EMPLOYEES>(DB_KEYS.employees, INITIAL_EMPLOYEES)
+      .filter(e => e.status !== 'inactive')
+      .map(mapHR)
+  , [])
+
+  const [records, setRecords] = useLocalStorage<AttendanceRecord[]>('vetafarm_attendance_records', initRecords)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<StatusKey | 'all'>('all')
   const [showModal, setShowModal] = useState(false)
   const [editRecord, setEditRecord] = useState<AttendanceRecord | null>(null)
   // Leave balances state (mutable, starts from employee data)
-  const [leaveBalances, setLeaveBalances] = useState<Record<string, number>>(
-    Object.fromEntries(employees.map(e => [e.id, e.annualLeave - e.usedLeave]))
+  const [leaveBalances, setLeaveBalances] = useLocalStorage<Record<string, number>>(
+    'vetafarm_attendance_leaves',
+    () => Object.fromEntries(employees.map(e => [e.id, e.annualLeave - e.usedLeave]))
   )
   // Quick transaction modal
   const [quickTx, setQuickTx] = useState<{ empId: string; type: TxType } | null>(null)
@@ -439,6 +467,17 @@ export default function AttendancePage() {
   const [selectedEmpIds, setSelectedEmpIds] = useState<Set<string>>(new Set())
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set())
   const [showBulkStatusModal, setShowBulkStatusModal] = useState(false)
+
+  // Ensure any employee added after first mount gets a default leave balance entry
+  useEffect(() => {
+    const missing = employees.filter(e => leaveBalances[e.id] === undefined)
+    if (missing.length > 0) {
+      setLeaveBalances(prev => ({
+        ...prev,
+        ...Object.fromEntries(missing.map(e => [e.id, e.annualLeave - e.usedLeave])),
+      }))
+    }
+  }, [employees])  // eslint-disable-line
 
   const todayDate = today()
 
@@ -1067,13 +1106,13 @@ export default function AttendancePage() {
 
       {/* ── Modals ── */}
       {showModal && (
-        <ManualModal initial={emptyManualForm()} isEdit={false} onSave={handleAdd} onClose={() => setShowModal(false)} />
+        <ManualModal initial={emptyManualForm()} isEdit={false} onSave={handleAdd} onClose={() => setShowModal(false)} employees={employees} />
       )}
       {editRecord && (
-        <ManualModal initial={editInitialForm(editRecord)} isEdit onSave={handleEdit} onClose={() => setEditRecord(null)} />
+        <ManualModal initial={editInitialForm(editRecord)} isEdit onSave={handleEdit} onClose={() => setEditRecord(null)} employees={employees} />
       )}
       {quickTx && (
-        <QuickTxModal empId={quickTx.empId} type={quickTx.type} onSave={handleQuickTx} onClose={() => setQuickTx(null)} />
+        <QuickTxModal empId={quickTx.empId} type={quickTx.type} onSave={handleQuickTx} onClose={() => setQuickTx(null)} employees={employees} />
       )}
     </div>
   )

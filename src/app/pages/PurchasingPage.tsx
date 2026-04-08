@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { toast } from 'sonner'
 import {
   Search, Plus, X, Download, ShoppingCart, Clock,
@@ -13,6 +14,7 @@ import {
 } from '../types/purchasing'
 import { purchaseOrders as initOrders, purchasePayments as initPayments } from '../data/purchasingData'
 import { INIT_SUPPLIERS } from './SuppliersPage'
+import { readLocalStorage, DB_KEYS } from '../hooks/useLocalStorage'
 import SearchableSelect from '../components/ui/SearchableSelect'
 
 function fmtMoney(n: number) { return n.toLocaleString('ar-EG') + ' ج.م' }
@@ -169,7 +171,7 @@ function AddOrderModal({ onSave, onClose }: { onSave: (form: OrderForm) => void;
               <SearchableSelect
                 value={form.supplierName}
                 onChange={v => set('supplierName', v)}
-                options={INIT_SUPPLIERS.map(s => ({ label: s.name, value: s.name }))}
+                options={readLocalStorage(DB_KEYS.suppliers, INIT_SUPPLIERS).filter(s => s.status === 'active').map(s => ({ label: s.company, value: s.company }))}
                 placeholder="اختر المورد..."
                 className={inputCls}
               />
@@ -423,8 +425,8 @@ const ALL_STATUSES: (PurchaseStatus | 'all')[] = ['all', 'pending', 'approved', 
 const FILTER_LABELS: Record<string, string> = { all: 'الكل', pending: 'معلق', approved: 'معتمد', partial: 'جزئي', received: 'مستلم', cancelled: 'ملغي' }
 
 export default function PurchasingPage() {
-  const [orders, setOrders]     = useState<PurchaseOrder[]>(initOrders)
-  const [payments, setPayments] = useState<PurchasePayment[]>(initPayments)
+  const [orders, setOrders]     = useLocalStorage<PurchaseOrder[]>('vetafarm_purchase_orders', initOrders)
+  const [payments, setPayments] = useLocalStorage<PurchasePayment[]>('vetafarm_purchase_payments', initPayments)
   const [search, setSearch]     = useState('')
   const [filterStatus, setFilterStatus] = useState<PurchaseStatus | 'all'>('all')
   const [showAddModal, setShowAddModal] = useState(false)

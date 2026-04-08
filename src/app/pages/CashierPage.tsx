@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { toast } from 'sonner'
 import {
   Search, Plus, X, Download, Landmark, Wallet2,
@@ -426,8 +427,8 @@ const ALL_TYPES: (TxType | 'all')[] = ['all', 'deposit', 'withdrawal', 'transfer
 const TYPE_FILTER_LABELS: Record<string, string> = { all: 'الكل', deposit: 'إيداع', withdrawal: 'سحب', transfer: 'تحويل' }
 
 export default function CashierPage() {
-  const [accs, setAccs]   = useState<TreasuryAccount[]>(initAccounts)
-  const [txs,  setTxs]    = useState<TreasuryTransaction[]>(initTransactions)
+  const [accs, setAccs]   = useLocalStorage<TreasuryAccount[]>('vetafarm_treasury_accounts', initAccounts)
+  const [txs,  setTxs]    = useLocalStorage<TreasuryTransaction[]>('vetafarm_treasury_txs', initTransactions)
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<TxType | 'all'>('all')
   const [filterAcc,  setFilterAcc]  = useState<string>('all')

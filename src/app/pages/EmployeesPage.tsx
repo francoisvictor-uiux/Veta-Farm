@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { toast } from 'sonner'
 import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 import {
@@ -48,7 +49,7 @@ interface Employee {
 // Mock Data
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INITIAL_EMPLOYEES: Employee[] = [
+export const INITIAL_EMPLOYEES: Employee[] = [
   { id:'e1',  name:'أحمد محمود النجار',      role:'manager',      jobTitle:'مدير عام',              nationalId:'29901151201423', address:'القاهرة، مدينة نصر، شارع عباس العقاد',         department:'الإدارة العامة',    phone:'01001234567', email:'ahmed@negmfarm.com',    basicSalary:22000, insurance:2200, taxes:660,  workStart:'2020-03-15', workEnd:'',           status:'active',   notes:'قائد الفريق الرئيسي، مسؤول عن الإدارة الكاملة للمزرعة',  avatar:'أ' },
   { id:'e2',  name:'محمد علي حسن',           role:'manager',      jobTitle:'مدير عمليات',           nationalId:'29812071303125', address:'القاهرة، المعادي، شارع كورنيش النيل',           department:'الإدارة العامة',    phone:'01507654321', email:'mohamed@negmfarm.com',  basicSalary:16000, insurance:1600, taxes:480,  workStart:'2021-06-01', workEnd:'',           status:'active',   notes:'مسؤول عن العمليات اليومية للمزرعة',                       avatar:'م' },
   { id:'e3',  name:'كريم عبدالله الشيخ',     role:'veterinarian', jobTitle:'دكتور بيطري أول',       nationalId:'29705082410348', address:'الجيزة، المهندسين، شارع جامعة الدول العربية',  department:'الرعاية البيطرية',  phone:'01209876543', email:'karim@negmfarm.com',    basicSalary:18000, insurance:1800, taxes:540,  workStart:'2021-09-20', workEnd:'',           status:'active',   notes:'متخصص في صحة الماشية والدواجن',                           avatar:'ك' },
@@ -749,7 +750,7 @@ function BulkAttendanceModal({ count, onClose, onConfirm }: { count: number; onC
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function EmployeesPage() {
-  const [employees, setEmployees]       = useState<Employee[]>(INITIAL_EMPLOYEES)
+  const [employees, setEmployees]       = useLocalStorage<Employee[]>('vetafarm_employees', INITIAL_EMPLOYEES)
   const [search, setSearch]             = useState('')
   const [filterRole, setFilterRole]     = useState<EmployeeRole | 'all'>('all')
   const [filterStatus, setFilterStatus] = useState<EmployeeStatus | 'all'>('all')

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 import {
   Plus, Search, X, Edit2, Trash2, Eye,
@@ -47,6 +48,7 @@ export const INIT_SUPPLIERS: Supplier[] = [
   { id:'s10', name:'رانيا خالد شلبي',         company:'شلبي للاستيراد والتصدير',          phone:'01507891234', email:'rania@shalaby-import.com',    address:'القاهرة، المعادي، شارع كورنيش النيل',              category:'equipment', balance:127500, status:'active',   notes:'مستورد معدات ماشية من هولندا وألمانيا',                registeredAt:'2023-03-12', lastOrderDate:'2026-02-14' },
   { id:'s11', name:'عمر طه زيدان',            company:'مؤسسة المنيا للأعلاف',             phone:'01006667788', email:'omar@minya-feed.com',         address:'المنيا، حي الكورنيش، شارع الجمهورية',              category:'feed',      balance:45500,  status:'inactive', notes:'يوجد نزاع في الفاتورة الأخيرة، تم تجميد التعامل',      registeredAt:'2023-05-20', lastOrderDate:'2025-11-30' },
   { id:'s12', name:'ياسمين سامي الغزالي',     company:'الغزالي للتقنيات الزراعية',        phone:'01209990011', email:'yasmine@ghazali-agtech.com',  address:'الجيزة، الشيخ زايد، المحور المركزي',               category:'equipment', balance:206000, status:'active',   notes:'متخصص في أنظمة الإدارة الذكية للمزارع',               registeredAt:'2023-08-01', lastOrderDate:'2026-03-18' },
+  { id:'s13', name:'وليد أحمد شعبان',         company:'شركة الخليج للمواشي',              phone:'01001234500', email:'walid@gulf-cattle.com',       address:'الإسماعيلية، المنطقة الصناعية، طريق القنال',        category:'other',     balance:0,      status:'active',   notes:'مورد رؤوس الماشية والخراف، يتعامل بالجملة',           registeredAt:'2020-05-15', lastOrderDate:'2026-03-27' },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -471,7 +473,7 @@ function SupplierModal({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(INIT_SUPPLIERS)
+  const [suppliers, setSuppliers] = useLocalStorage<Supplier[]>('vetafarm_suppliers', INIT_SUPPLIERS)
 
   // Filters
   const [search, setSearch] = useState('')

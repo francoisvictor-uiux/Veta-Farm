@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useLocalStorage } from '../../hooks/useLocalStorage'
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal'
 import {
   Plus, Search, X, Users, UserCheck, UserX,
@@ -595,7 +596,7 @@ function UserModal({ user, onClose, onSave }: ModalProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<SystemUser[]>(INITIAL_USERS)
+  const [users, setUsers] = useLocalStorage<SystemUser[]>('vetafarm_users', INITIAL_USERS)
 
   // UI State
   const [search,        setSearch]        = useState('')

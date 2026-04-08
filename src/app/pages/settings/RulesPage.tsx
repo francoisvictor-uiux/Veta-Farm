@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useLocalStorage } from '../../hooks/useLocalStorage'
 import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal'
 import {
   Plus, Search, Edit2, Trash2, ChevronRight,
@@ -550,7 +551,7 @@ function DetailDrawer({ rule, onClose, onEdit }: { rule: Rule; onClose: () => vo
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function RulesPage() {
-  const [rules, setRules] = useState<Rule[]>(MOCK_RULES)
+  const [rules, setRules] = useLocalStorage<Rule[]>('vetafarm_rules', MOCK_RULES)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<RuleStatus | 'all'>('all')
   const [filterModule, setFilterModule] = useState<string>('all')

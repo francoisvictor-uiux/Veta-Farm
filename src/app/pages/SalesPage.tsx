@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { toast } from 'sonner'
 import {
   Plus, Search, X, CheckCircle2, ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft,
@@ -459,8 +460,8 @@ const ALL_STATUSES: (SaleStatus | 'all')[] = ['all', 'awaiting_approval', 'pendi
 const FILTER_LABELS: Record<string, string> = { all: 'الكل', awaiting_approval: 'بانتظار الموافقة', pending: 'معلق', confirmed: 'مؤكد', partial: 'جزئي', delivered: 'مسلّم', cancelled: 'ملغي' }
 
 export default function SalesPage() {
-  const [orders, setOrders]     = useState<SaleOrder[]>(initOrders)
-  const [payments, setPayments] = useState<SalePayment[]>(initPayments)
+  const [orders, setOrders]     = useLocalStorage<SaleOrder[]>('vetafarm_sale_orders', initOrders)
+  const [payments, setPayments] = useLocalStorage<SalePayment[]>('vetafarm_sale_payments', initPayments)
   const [search, setSearch]     = useState('')
   const [filterStatus, setFilterStatus] = useState<SaleStatus | 'all'>('all')
   const [showAddModal, setShowAddModal] = useState(false)

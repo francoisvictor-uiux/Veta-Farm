@@ -1,89 +1,83 @@
-import React, { createContext, useContext, useState, useMemo } from 'react'
-import type { 
-  Account, JournalEntry, CostCenter, Currency, 
-  Asset, BankAccount, Treasury 
+import React, { createContext, useContext } from 'react'
+import type {
+  Account, JournalEntry, CostCenter, Currency,
+  Asset, BankAccount, Treasury
 } from '../../types/accounts'
-
-// Mocks
-import { 
-  CHART_OF_ACCOUNTS, JOURNAL_ENTRIES, COST_CENTERS, 
+import {
+  CHART_OF_ACCOUNTS, JOURNAL_ENTRIES, COST_CENTERS,
   CURRENCIES, ASSETS, BANK_ACCOUNTS, TREASURIES,
-  MOCK_CUSTOMERS, MOCK_SUPPLIERS
+  MOCK_CUSTOMERS, MOCK_SUPPLIERS,
 } from '../../data/accountsData'
+import { useLocalStorage, DB_KEYS } from '../../hooks/useLocalStorage'
 
 interface AccountsContextType {
-  accounts: Account[]
-  setAccounts: React.Dispatch<React.SetStateAction<Account[]>>
-  entries: JournalEntry[]
-  setEntries: React.Dispatch<React.SetStateAction<JournalEntry[]>>
-  costCenters: CostCenter[]
-  setCostCenters: React.Dispatch<React.SetStateAction<CostCenter[]>>
-  currencies: Currency[]
-  assets: Asset[]
-  setAssets: React.Dispatch<React.SetStateAction<Asset[]>>
-  bankAccounts: BankAccount[]
+  accounts:        Account[]
+  setAccounts:     React.Dispatch<React.SetStateAction<Account[]>>
+  entries:         JournalEntry[]
+  setEntries:      React.Dispatch<React.SetStateAction<JournalEntry[]>>
+  costCenters:     CostCenter[]
+  setCostCenters:  React.Dispatch<React.SetStateAction<CostCenter[]>>
+  currencies:      Currency[]
+  assets:          Asset[]
+  setAssets:       React.Dispatch<React.SetStateAction<Asset[]>>
+  bankAccounts:    BankAccount[]
   setBankAccounts: React.Dispatch<React.SetStateAction<BankAccount[]>>
-  treasuries: Treasury[]
-  setTreasuries: React.Dispatch<React.SetStateAction<Treasury[]>>
+  treasuries:      Treasury[]
+  setTreasuries:   React.Dispatch<React.SetStateAction<Treasury[]>>
 
-  customers: { id: string, name: string }[]
-  suppliers: { id: string, name: string }[]
+  customers: { id: string; name: string }[]
+  suppliers: { id: string; name: string }[]
 
-  // Shared generic actions that manipulate balances across state (Frontend Mock Only)
   postJournalEntry: (entry: JournalEntry) => void
 }
 
 const AccountsContext = createContext<AccountsContextType | null>(null)
 
 export function AccountsProvider({ children }: { children: React.ReactNode }) {
-  const [accounts, setAccounts] = useState<Account[]>(CHART_OF_ACCOUNTS)
-  const [entries, setEntries] = useState<JournalEntry[]>(JOURNAL_ENTRIES)
-  const [costCenters, setCostCenters] = useState<CostCenter[]>(COST_CENTERS)
-  const [assets, setAssets] = useState<Asset[]>(ASSETS)
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(BANK_ACCOUNTS)
-  const [treasuries, setTreasuries] = useState<Treasury[]>(TREASURIES)
+  // ── Persistent state via virtual DB ──────────────────────────────────────
+  const [accounts,     setAccounts]     = useLocalStorage<Account[]>     (DB_KEYS.accountsChart,        CHART_OF_ACCOUNTS)
+  const [entries,      setEntries]      = useLocalStorage<JournalEntry[]> (DB_KEYS.accountsEntries,      JOURNAL_ENTRIES)
+  const [costCenters,  setCostCenters]  = useLocalStorage<CostCenter[]>   (DB_KEYS.accountsCostCenters,  COST_CENTERS)
+  const [assets,       setAssets]       = useLocalStorage<Asset[]>        (DB_KEYS.accountsAssets,       ASSETS)
+  const [bankAccounts, setBankAccounts] = useLocalStorage<BankAccount[]>  (DB_KEYS.accountsBankAccounts, BANK_ACCOUNTS)
+  const [treasuries,   setTreasuries]   = useLocalStorage<Treasury[]>     (DB_KEYS.accountsTreasuries,   TREASURIES)
 
-  // We could add state for Customers/Suppliers but for now reading from mock is ok
-  const customers = MOCK_CUSTOMERS
-  const suppliers = MOCK_SUPPLIERS
+  // Currencies & parties are static config — no persistence needed
   const currencies = CURRENCIES
+  const customers  = MOCK_CUSTOMERS
+  const suppliers  = MOCK_SUPPLIERS
 
+  // ── Double-entry posting ──────────────────────────────────────────────────
   const postJournalEntry = (entry: JournalEntry) => {
-    // 1. Add Entry
+    // 1. Append entry
     setEntries(prev => [entry, ...prev])
 
-    // 2. Adjust Account Balances
-    // Note: This is an oversimplified front-end balance calculation logic. 
-    // Usually backend does this securely by applying debits and credits correctly based on natural balance.
+    // 2. Adjust balances using account nature
+    //    Debit-nature accounts: debit increases balance, credit decreases
+    //    Credit-nature accounts: credit increases balance, debit decreases
     setAccounts(prev => prev.map(acc => {
       let netChange = 0
       entry.lines.forEach(line => {
         if (line.accountId === acc.id) {
-          if (acc.nature === 'debit') {
-            netChange += (line.debit - line.credit)
-          } else {
-            netChange += (line.credit - line.debit)
-          }
+          netChange += acc.nature === 'debit'
+            ? (line.debit  - line.credit)
+            : (line.credit - line.debit)
         }
       })
-
-      if (netChange !== 0) {
-        return { ...acc, balance: acc.balance + netChange }
-      }
-      return acc
+      return netChange !== 0 ? { ...acc, balance: acc.balance + netChange } : acc
     }))
   }
 
   return (
     <AccountsContext.Provider value={{
-      accounts, setAccounts,
-      entries, setEntries,
-      costCenters, setCostCenters,
+      accounts,     setAccounts,
+      entries,      setEntries,
+      costCenters,  setCostCenters,
       currencies,
-      assets, setAssets,
+      assets,       setAssets,
       bankAccounts, setBankAccounts,
-      treasuries, setTreasuries,
-      customers, suppliers,
+      treasuries,   setTreasuries,
+      customers,    suppliers,
       postJournalEntry,
     }}>
       {children}

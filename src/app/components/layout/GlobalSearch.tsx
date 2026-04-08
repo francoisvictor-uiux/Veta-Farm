@@ -4,7 +4,8 @@ import { Search, X, ShoppingCart, Tag, Landmark, Users, FileText, ArrowLeft } fr
 import { purchaseOrders } from '../../data/purchasingData'
 import { saleOrders }     from '../../data/salesData'
 import { transactions }   from '../../data/treasuryData'
-import { employees }      from '../../data/attendanceData'
+import { INITIAL_EMPLOYEES } from '../../pages/EmployeesPage'
+import { readLocalStorage, DB_KEYS } from '../../hooks/useLocalStorage'
 
 interface Result {
   id: string; category: 'purchase' | 'sale' | 'cashier' | 'hr'
@@ -50,9 +51,9 @@ export function GlobalSearch({ placeholder = 'بحث سريع...', className = '
     transactions
       .filter(t => t.txNumber.toLowerCase().includes(q) || t.description.includes(q) || (t.reference ?? '').toLowerCase().includes(q))
       .slice(0, 3).forEach(t => out.push({ id: t.id, category: 'cashier', path: '/cashier', title: t.txNumber, value: fmt(t.amount), sub: t.description }))
-    employees
-      .filter(e => e.name.includes(q) || e.employeeNumber.toLowerCase().includes(q) || e.department.includes(q) || e.jobTitle.includes(q))
-      .slice(0, 3).forEach(e => out.push({ id: e.id, category: 'hr', path: '/employees', title: e.name, sub: `${e.employeeNumber} · ${e.jobTitle} · ${e.department}` }))
+    readLocalStorage<typeof INITIAL_EMPLOYEES>(DB_KEYS.employees, INITIAL_EMPLOYEES)
+      .filter(e => e.name.includes(q) || e.id.includes(q) || e.department.includes(q) || e.jobTitle.includes(q))
+      .slice(0, 3).forEach(e => out.push({ id: e.id, category: 'hr', path: '/employees', title: e.name, sub: `${e.id} · ${e.jobTitle} · ${e.department}` }))
     return out
   }, [q])
 
