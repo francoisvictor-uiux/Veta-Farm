@@ -3,7 +3,11 @@
     "allow": [
       "mcp__plugin_figma_figma__get_metadata",
       "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(cp \"D:\\\\Francois\\\\Cattle Management Dashboard\\\\src\\\\imports\\\\VisualizationPage-1\\\\b505ff5a873dd24b362179d4df35899192eba973.png\" \"D:\\\\Francois\\\\Veta Farm Frontend\\\\.claude\\\\worktrees\\\\peaceful-bose-88d71a\\\\src\\\\app\\\\pages\\\\stations\\\\wooden-sign.png\")",
+      "Bash(cp \"D:\\\\Francois\\\\Cattle Management Dashboard\\\\src\\\\imports\\\\VisualizationPage-1\\\\e9cf267e95cf5435606d450e4d9567254715c280.png\" \"D:\\\\Francois\\\\Veta Farm Frontend\\\\.claude\\\\worktrees\\\\peaceful-bose-88d71a\\\\src\\\\app\\\\pages\\\\stations\\\\farm-barn.png\")",
+      "Bash(cp \"D:\\\\Francois\\\\Cattle Management Dashboard\\\\src\\\\imports\\\\VisualizationPage-2\\\\eef4377f69dedfb5777ec5e584dc41f21b901d22.png\" \"D:\\\\Francois\\\\Veta Farm Frontend\\\\.claude\\\\worktrees\\\\peaceful-bose-88d71a\\\\src\\\\app\\\\pages\\\\stations\\\\barn-interior.png\")",
+      "Bash(python3 -c ' *)"
     ]
   }
 }

@@ -9,6 +9,7 @@ import { GlobalSearch } from './GlobalSearch'
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/':               { title: 'الرئيسية',          subtitle: 'لوحة التحكم الرئيسية'       },
+  '/stations':       { title: 'المحطات',             subtitle: 'إدارة محطات التسمين'          },
   '/cattle':         { title: 'الرؤوس والدورات',   subtitle: 'إدارة الدورات ورؤوس الماشية' },
   '/inventory':      { title: 'المخزون',            subtitle: 'إدارة المخازن والأصناف'      },
   '/purchasing':     { title: 'المشتريات',          subtitle: 'أوامر الشراء والفواتير'       },

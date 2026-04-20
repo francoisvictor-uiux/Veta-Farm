@@ -2,6 +2,7 @@ import { createHashRouter } from 'react-router'
 import { AppLayout } from './components/layout/AppLayout'
 import LoginPage from './pages/auth/LoginPage'
 import Dashboard from './pages/Dashboard'
+import StationsPage from './pages/StationsPage'
 import RulesPage from './pages/settings/RulesPage'
 import UsersPage from './pages/settings/UsersPage'
 import EmployeesPage from './pages/EmployeesPage'
@@ -26,6 +27,7 @@ export const router = createHashRouter([
     Component: AppLayout,
     children: [
       { index: true,                    Component: Dashboard        },
+      { path: 'stations',               Component: StationsPage     },
       { path: 'cattle',                 Component: CattlePage       },
       { path: 'inventory',              Component: InventoryPage    },
       { path: 'purchasing',             Component: PurchasingPage   },
