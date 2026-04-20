@@ -3,7 +3,8 @@
     "allow": [
       "mcp__plugin_figma_figma__get_metadata",
       "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npx vercel:*)"
     ]
   }
 }
