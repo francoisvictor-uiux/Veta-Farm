@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router'
 import {
   LayoutDashboard, Layers, Package, ShoppingCart, Tag,
   BookOpen, Landmark, Truck, Users, UserCheck, CalendarDays,
-  Wallet, ShieldCheck, UserCog,
+  Wallet, ShieldCheck, UserCog, Warehouse,
   ChevronDown, ChevronUp, LogOut, PanelRightClose,
 } from 'lucide-react'
 
@@ -13,6 +13,7 @@ interface NavGroup { label?: string; items: NavItem[] }
 const NAV_GROUPS: NavGroup[] = [
   { items: [{ label: 'الرئيسية', icon: LayoutDashboard, path: '/' }] },
   { label: 'إدارة المزرعة', items: [
+    { label: 'المحطات',         icon: Warehouse,    path: '/stations'   },
     { label: 'الرؤوس والدورات', icon: Layers,       path: '/cattle'     },
     { label: 'المخزون',          icon: Package,      path: '/inventory'  },
     { label: 'المشتريات',        icon: ShoppingCart, path: '/purchasing' },
