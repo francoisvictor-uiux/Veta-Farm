@@ -6,6 +6,7 @@ import { Toaster } from 'sonner'
 import { NotificationPanel, MOCK_NOTIFICATIONS, type Notification } from './NotificationPanel'
 import { ProfileDropdown } from './ProfileDropdown'
 import { GlobalSearch } from './GlobalSearch'
+import { StationsProvider } from '../../contexts/StationsContext'
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/':               { title: 'الرئيسية',          subtitle: 'لوحة التحكم الرئيسية'       },
@@ -113,7 +114,9 @@ export function AppLayout() {
         <Header notifications={notifications} showNotif={showNotif} showProfile={showProfile}
           onToggleNotif={toggleNotif} onToggleProfile={toggleProfile}
           onMarkAllRead={markAllRead} onMarkRead={markRead} />
-        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto outline-none"><Outlet /></main>
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
+          <StationsProvider><Outlet /></StationsProvider>
+        </main>
       </div>
     </div>
   )

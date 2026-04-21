@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useStations } from '../contexts/StationsContext'
 import {
   Search, Plus, Filter, ChevronDown, ChevronLeft, ChevronRight, Edit2, Trash2, Eye,
   Calendar, Info, Scale, Target, PlayCircle, Truck, ScanLine, Type, Camera,
@@ -180,12 +181,15 @@ interface HeadFormState {
   entryDate: string
   weighbridgeCard: string
   notes: string
+  stationId: string
+  roomId: string
 }
 
 function emptyHeadForm(): HeadFormState {
   return {
     batchId: '', type: '', count: '1', totalWeight: '', purchasePrice: '', breed: '', tag: '', vehicleNumber: '', weighbridgePhoto: null,
-    supplierName: '', supplierInvoice: '', entryDate: new Date().toISOString().split('T')[0], weighbridgeCard: '', notes: ''
+    supplierName: '', supplierInvoice: '', entryDate: new Date().toISOString().split('T')[0], weighbridgeCard: '', notes: '',
+    stationId: '', roomId: '',
   }
 }
 
@@ -366,8 +370,11 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
 }) {
   const [form, setForm] = useState<HeadFormState>(initial)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const { stations, updateRoom } = useStations()
   const inp = 'w-full h-9 px-3 rounded-[10px] border border-neutral-200 bg-white text-[13px] font-cairo text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all placeholder:text-neutral-400 disabled:bg-neutral-50 disabled:text-neutral-500'
   const lbl = 'block text-[11px] font-semibold text-neutral-500 mb-1 uppercase tracking-wide'
+
+  const selectedStation = stations.find(s => String(s.id) === form.stationId)
 
   function save() {
     const errs: Record<string, string> = {}
@@ -377,6 +384,27 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
     if (!form.purchasePrice || parseFloat(form.purchasePrice) <= 0) errs.purchasePrice = 'يرجى إدخال سعر الشراء'
     if (!form.batchId) errs.batchId = 'يرجى اختيار الدورة'
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
+
+    // Update station room if assigned
+    if (form.stationId && form.roomId && selectedStation) {
+      const room = selectedStation.rooms.find(r => String(r.id) === form.roomId)
+      if (room) {
+        updateRoom(selectedStation.id, {
+          ...room,
+          status: 'clinic',
+          cattleType: form.type as 'dairy' | 'fattening',
+          cattleCount: (room.cattleCount ?? 0) + parseInt(form.count),
+          batchName: batches.find(b => b.id === form.batchId)?.name || room.batchName,
+          entryDate: form.entryDate || room.entryDate,
+          avgWeight: form.totalWeight && form.count
+            ? Math.round(parseFloat(form.totalWeight) / parseInt(form.count))
+            : room.avgWeight,
+          purchasePrice: parseFloat(form.purchasePrice) || room.purchasePrice,
+          comment: form.notes || room.comment,
+        })
+      }
+    }
+
     onSave(form)
   }
 
@@ -407,6 +435,32 @@ function HeadFormModal({ batches, initial, isEdit, onSave, onClose }: {
                 ))}
               </select>
               {errors.batchId && <p className="text-error-500 text-[11px] mt-1 pr-1">{errors.batchId}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={lbl}>المحطة <span className="text-neutral-400 font-normal lowercase">(اختياري)</span></label>
+                <select value={form.stationId}
+                  onChange={e => setForm({ ...form, stationId: e.target.value, roomId: '' })}
+                  className={inp}>
+                  <option value="">-- اختر المحطة --</option>
+                  {stations.map(s => (
+                    <option key={s.id} value={String(s.id)}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>القنية <span className="text-neutral-400 font-normal lowercase">(اختياري)</span></label>
+                <select value={form.roomId}
+                  onChange={e => setForm({ ...form, roomId: e.target.value })}
+                  className={inp}
+                  disabled={!form.stationId}>
+                  <option value="">-- اختر القنية --</option>
+                  {selectedStation?.rooms.map(r => (
+                    <option key={r.id} value={String(r.id)}>قنية {r.id}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

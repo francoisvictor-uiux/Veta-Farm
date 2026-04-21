@@ -4,36 +4,22 @@ import { StationDetailView } from './stations/StationDetailView';
 import { RoomActionModal } from './stations/RoomActionModal';
 import { AddStationModal } from './stations/AddStationModal';
 import { EditStationModal } from './stations/EditStationModal';
-
-interface Room {
-  id: number;
-  status: 'available' | 'occupied' | 'reserved';
-  cattleCount?: number;
-  customer?: string;
-  comment?: string;
-}
-
-interface Station {
-  id: number;
-  name: string;
-  rooms: Room[];
-}
+import { AddCattleModal, type CattleFormData } from './stations/AddCattleModal';
+import { useStations } from '../contexts/StationsContext';
+import type { Room } from './stations/types';
 
 function makeRooms(count: number): Room[] {
   return Array.from({ length: count }, (_, i) => ({ id: i + 1, status: 'available' as const }));
 }
 
 export default function StationsPage() {
-  const [stations, setStations] = useState<Station[]>([
-    { id: 1, name: 'محطة 1', rooms: makeRooms(12) },
-    { id: 2, name: 'محطة 2', rooms: makeRooms(12) },
-    { id: 3, name: 'محطة 3', rooms: makeRooms(12) },
-  ]);
+  const { stations, setStations } = useStations();
 
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [showAddStationModal, setShowAddStationModal] = useState(false);
   const [editingStationId, setEditingStationId] = useState<number | null>(null);
+  const [addCattleTarget, setAddCattleTarget] = useState<number | null | undefined>(undefined);
 
   const selectedStation = stations.find(s => s.id === selectedStationId);
   const selectedRoom = selectedStation?.rooms.find(r => r.id === selectedRoomId);
@@ -49,7 +35,7 @@ export default function StationsPage() {
   };
 
   const handleAddStation = (name: string, roomCount: number) => {
-    const newStation: Station = {
+    const newStation = {
       id: Math.max(...stations.map(s => s.id), 0) + 1,
       name,
       rooms: makeRooms(roomCount),
@@ -66,7 +52,62 @@ export default function StationsPage() {
     setSelectedStationId(null);
   };
 
-  const getStationStats = (station: Station) => ({
+  const handleAddCattle = (roomId: number | null, data: CattleFormData) => {
+    if (!selectedStationId) return;
+    setStations(prev => prev.map(station => {
+      if (station.id !== selectedStationId) return station;
+      if (roomId !== null) {
+        return {
+          ...station,
+          rooms: station.rooms.map(r =>
+            r.id === roomId
+              ? {
+                  ...r,
+                  status: 'clinic' as const,
+                  cattleType: data.cattleType || r.cattleType,
+                  cattleCount: (r.cattleCount ?? 0) + (data.count ?? 0),
+                  batchName: data.batchName || r.batchName,
+                  entryDate: data.entryDate || r.entryDate,
+                  avgWeight: data.totalWeight && data.count
+                    ? Math.round(data.totalWeight / data.count)
+                    : r.avgWeight,
+                  purchasePrice: data.purchasePrice ?? r.purchasePrice,
+                  comment: data.notes || r.comment,
+                }
+              : r
+          ),
+        };
+      } else {
+        const roomCount = station.rooms.length;
+        const perRoom = Math.ceil((data.count ?? 0) / roomCount);
+        let remaining = data.count ?? 0;
+        return {
+          ...station,
+          rooms: station.rooms.map(r => {
+            if (remaining <= 0) return r;
+            const count = Math.min(perRoom, remaining);
+            remaining -= count;
+            return {
+              ...r,
+              status: 'clinic' as const,
+              cattleType: data.cattleType || r.cattleType,
+              cattleCount: (r.cattleCount ?? 0) + count,
+              batchName: data.batchName || r.batchName,
+              entryDate: data.entryDate || r.entryDate,
+              avgWeight: data.totalWeight && data.count
+                ? Math.round(data.totalWeight / data.count)
+                : r.avgWeight,
+              purchasePrice: data.purchasePrice ?? r.purchasePrice,
+              comment: data.notes || r.comment,
+            };
+          }),
+        };
+      }
+    }));
+    setAddCattleTarget(undefined);
+  };
+
+  const getStationStats = (station: typeof stations[0]) => ({
     reserved: station.rooms.filter(r => r.status === 'reserved').length,
     empty: station.rooms.filter(r => r.status === 'available').length,
     totalCattle: station.rooms.reduce((sum, r) => sum + (r.cattleCount || 0), 0),
@@ -87,6 +128,7 @@ export default function StationsPage() {
             onRoomClick={(roomId) => setSelectedRoomId(roomId)}
             onBack={() => setSelectedStationId(null)}
             onEditStation={(stationId) => setEditingStationId(stationId)}
+            onAddCattle={(roomId) => setAddCattleTarget(roomId)}
             hasPrev={!!prevStation}
             hasNext={!!nextStation}
             onPrev={() => prevStation && setSelectedStationId(prevStation.id)}
@@ -110,6 +152,15 @@ export default function StationsPage() {
             onDelete={handleDeleteStation}
           />
         )}
+
+        {addCattleTarget !== undefined && (
+          <AddCattleModal
+            stationName={selectedStation.name}
+            roomId={addCattleTarget}
+            onClose={() => setAddCattleTarget(undefined)}
+            onAdd={(data) => handleAddCattle(addCattleTarget, data)}
+          />
+        )}
       </div>
     );
   }
@@ -118,20 +169,11 @@ export default function StationsPage() {
     <div className="bg-[#f2f2f0] min-h-screen">
       <div className="content-stretch flex flex-col items-center px-4 py-[24px]">
         <div className="w-full max-w-[1052px] mb-6 flex justify-between items-start">
-          {/* Right side (first in RTL): title */}
           <div className="text-right">
-            <p className="font-bold leading-[33px] text-[#171717] text-[22px] mb-1" dir="auto">
-              اختر المحطة
-            </p>
-            <p className="font-normal leading-[19.5px] text-[#737373] text-[13px]" dir="auto">
-              اضغط على المحطة لعرض الغرف والإجراءات
-            </p>
+            <p className="font-bold leading-[33px] text-[#171717] text-[22px] mb-1" dir="auto">اختر المحطة</p>
+            <p className="font-normal leading-[19.5px] text-[#737373] text-[13px]" dir="auto">اضغط على المحطة لعرض القنايا والإجراءات</p>
           </div>
-          {/* Left side (last in RTL): button */}
-          <button
-            onClick={() => setShowAddStationModal(true)}
-            className="bg-[#135e00] text-white px-6 py-3 rounded-md hover:bg-[#1a7a00] transition-colors"
-          >
+          <button onClick={() => setShowAddStationModal(true)} className="bg-[#135e00] text-white px-6 py-3 rounded-md hover:bg-[#1a7a00] transition-colors">
             + إضافة محطة جديدة
           </button>
         </div>

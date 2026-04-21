@@ -45,7 +45,7 @@ export function StationCard({ stationName, reservedCount, emptyCount, cattleCoun
         <div className="content-stretch flex flex-col h-[55px] items-start pr-px pt-[8px] relative w-[110.563px]">
           <div aria-hidden="true" className="absolute border-[#f5f5f5] border-r border-solid inset-0 pointer-events-none" />
           <p className="-translate-x-1/2 font-bold leading-[24px] left-[54.88px] relative not-italic text-[#262626] text-[16px] text-center whitespace-nowrap">{emptyCount}</p>
-          <p className="-translate-x-1/2 font-medium leading-[15px] left-[54.89px] relative not-italic text-[#737373] text-[10px] text-center whitespace-nowrap" dir="auto">قنية</p>
+          <p className="-translate-x-1/2 font-medium leading-[15px] left-[54.89px] relative not-italic text-[#737373] text-[10px] text-center whitespace-nowrap" dir="auto">فارغة</p>
         </div>
         <div className="content-stretch flex flex-col h-[55px] items-start pr-px pt-[8px] w-[110.563px]">
           <p className="-translate-x-1/2 font-bold leading-[24px] left-[54.88px] relative not-italic text-[#262626] text-[16px] text-center whitespace-nowrap">{cattleCount}</p>
